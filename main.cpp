@@ -167,6 +167,17 @@ void profile(std::vector<unsigned char>& buf) {
   get_loops(buf);
 }
 
+std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
+  std::vector<unsigned char> new_buf;
+  for (int i = 0; i < buf.size(); i++) {
+    if (bfc.find(buf[i]) != std::string::npos) {
+      new_buf.push_back(buf[i]);
+    }
+  }
+
+  return new_buf;
+}
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "require input file\n";
@@ -176,7 +187,9 @@ int main(int argc, char** argv) {
   // TODO: check argc
   std::ifstream file(argv[argc - 1]);
   std::istream_iterator<unsigned char> start(file), end;
-  std::vector<unsigned char> buf(start, end);
+  std::vector<unsigned char> fbuf(start, end);
+  // remove whitespaces and comments
+  std::vector<unsigned char> buf = clean_buf(fbuf);
   m = compute_branch(buf);
 
   if (!strcmp(argv[1], "-p")) {
