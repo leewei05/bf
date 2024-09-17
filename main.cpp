@@ -6,6 +6,7 @@
 #include <stack>
 #include <cstring>
 #include <map>
+#include <utility>
 
 const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
@@ -23,7 +24,7 @@ void die(std::string msg) {
   exit(1);
 }
 
-std::map<int, int> compute_branch(std::vector<unsigned char> buf) {
+std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
   std::stack<int> stk;
   for (int i = 0; i < buf.size(); i++) {
     char c = buf[i];
@@ -41,7 +42,7 @@ std::map<int, int> compute_branch(std::vector<unsigned char> buf) {
 }
 
 
-void interp(std::vector<unsigned char> buf, bool p) {
+void interp(std::vector<unsigned char>& buf, bool p) {
   int pc = 50000;
   for (int i = 0; i < buf.size(); i++) {
     switch (buf[i]) {
@@ -98,16 +99,27 @@ void interp(std::vector<unsigned char> buf, bool p) {
   }
 }
 
-void get_loops(std::vector<unsigned char> buf) {
+void print_loops(std::vector<unsigned char>& buf, std::vector<std::pair<int, int>> v) {
+  for (auto& [count, pos]: v) {
+    std::cout << pos << ": ";
+    for (int j = pos; j <= m.at(pos); j++) {
+     if (bfc.find(buf[j]) != std::string::npos)
+       std::cout << buf[j];
+    }
+    std::cout << ": " << count << "\n";
+  }
+}
+
+void get_loops(std::vector<unsigned char>& buf) {
   bool leftB = false;
   bool is_simple = false;
   int leftPos = 0;
   std::string not_simple = "><.,";
   std::string simple = "+-";
   // simple loops
-  std::vector<int> sl;
+  std::vector<std::pair<int,int>> sl;
   // non simple loops
-  std::vector<int> nsl;
+  std::vector<std::pair<int,int>> nsl;
   int count = 0;
   for (int i = 0; i < buf.size(); i++) {
     if (count > 1) {
@@ -121,10 +133,11 @@ void get_loops(std::vector<unsigned char> buf) {
       is_simple = true;
       count = 0;
     } else if (leftB && c == ']') {
+      int body = pi[leftPos + 1].count;
       if (is_simple) {
-        sl.push_back(leftPos);
+        sl.push_back(std::make_pair(body, leftPos));
       } else {
-        nsl.push_back(leftPos);
+        nsl.push_back(std::make_pair(body, leftPos));
       }
       count = 0;
       leftB = false;
@@ -136,27 +149,13 @@ void get_loops(std::vector<unsigned char> buf) {
   }
 
   std::cout << "\nSimple loops: \n";
-  for (auto& pos : sl) {
-    std::cout << pos << ": ";
-    for (int j = pos; j <= m.at(pos); j++) {
-     if (bfc.find(buf[j]) != std::string::npos)
-       std::cout << buf[j];
-    }
-    std::cout << ": " << pi[pos + 1].count << "\n";
-  }
+  print_loops(buf, sl);
 
   std::cout << "\nNon-simple loops: \n";
-  for (auto& pos : nsl) {
-    std::cout << pos << ": ";
-    for (int j = pos; j <= m.at(pos); j++) {
-     if (bfc.find(buf[j]) != std::string::npos)
-       std::cout << buf[j];
-    }
-    std::cout << ": " << pi[pos + 1].count << "\n";
-  }
+  print_loops(buf, nsl);
 }
 
-void profile(std::vector<unsigned char> buf) {
+void profile(std::vector<unsigned char>& buf) {
   interp(buf, true);
   std::cout << "Instructions profile:\n";
   for (int i = 0; i < buf.size(); i++) {
