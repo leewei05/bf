@@ -7,6 +7,7 @@
 #include <cstring>
 #include <map>
 #include <utility>
+#include <algorithm>
 
 const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
@@ -81,7 +82,6 @@ void interp(std::vector<unsigned char>& buf, bool p) {
           tape[pc] = getchar();
         break;
       case '[':
-        // start collecting info
         pi[i].count++;
         if (!tape[pc]) {
           i = m.at(i);
@@ -97,6 +97,12 @@ void interp(std::vector<unsigned char>& buf, bool p) {
         break;
     }
   }
+}
+
+void sort_loop_info(std::vector<std::pair<int, int>>& v) {
+  std::stable_sort(v.begin(), v.end(),
+  [](const std::pair<int,int>& p1, const std::pair<int,int>& p2)
+  { return p1.first > p2.first; });
 }
 
 void print_loops(std::vector<unsigned char>& buf, std::vector<std::pair<int, int>> v) {
@@ -148,9 +154,11 @@ void get_loops(std::vector<unsigned char>& buf) {
     }
   }
 
+  sort_loop_info(sl);
   std::cout << "\nSimple loops: \n";
   print_loops(buf, sl);
 
+  sort_loop_info(nsl);
   std::cout << "\nNon-simple loops: \n";
   print_loops(buf, nsl);
 }
