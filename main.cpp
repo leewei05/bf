@@ -3,7 +3,9 @@
 #include <iterator>
 #include <vector>
 #include <string>
+#include <stack>
 #include <cstring>
+#include <map>
 
 const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
@@ -19,7 +21,27 @@ void die(std::string msg) {
   exit(1);
 }
 
+std::map<int, int> compute_branch(std::vector<unsigned char> buf) {
+  std::map<int, int> m;
+  std::stack<int> stk;
+  for (int i = 0; i < buf.size(); i++) {
+    char c = buf[i];
+    if (c == '[') {
+      stk.push(i);
+    } else if (c == ']' && !stk.empty()) {
+      int leftB = stk.top();
+      m.insert({i, leftB});
+      m.insert({leftB, i});
+      stk.pop();
+    }
+  }
+
+  return m;
+}
+
+
 void interp(std::vector<unsigned char> buf, bool p) {
+  std::map<int, int> m = compute_branch(buf);
   int pc = 50000;
   for (int i = 0; i < buf.size(); i++) {
     switch (buf[i]) {
@@ -58,31 +80,16 @@ void interp(std::vector<unsigned char> buf, bool p) {
           tape[pc] = getchar();
         break;
       case '[':
+        // start collecting info
         pi[i].count++;
         if (!tape[pc]) {
-          int cond = 1;
-          while (cond) {
-            char curr = buf[++i];
-            if (curr == ']') {
-              cond--;
-            } else if (curr == '[') { // match one more ]
-              cond++;
-            }
-          }
+          i = m.at(i);
         }
         break;
       case ']':
         pi[i].count++;
         if (tape[pc]) {
-          int cond = 1;
-          while (cond) {
-            char curr = buf[--i];
-            if (curr == '[') {
-              cond--;
-            } else if (curr == ']') { // match one more [
-              cond++;
-            }
-          }
+          i = m.at(i);
         }
         break;
       default:

@@ -8,3 +8,14 @@ Executed in   31.87 secs    fish           external
    usr time   30.76 secs    0.39 millis   30.76 secs
    sys time    0.20 secs    1.64 millis    0.19 secs
 ```
+
+Pre-compute branch target
+
+```
+time ./bf ../brainfuck-benchmark/benches/mandel.b > /dev/null
+
+________________________________________________________
+Executed in   25.38 secs    fish           external
+   usr time   25.25 secs    0.51 millis   25.25 secs
+   sys time    0.05 secs    1.57 millis    0.05 secs
+```
