@@ -12,3 +12,9 @@ make -j
 git submodule update --init
 ./bf ../brainfuck-benchmark/benches/hello.b
 ```
+
+Enable profiling option with `-p`.
+
+```
+./bf -p ../brainfuck-benchmark/benches/hello.b
+```
