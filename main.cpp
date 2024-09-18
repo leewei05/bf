@@ -186,6 +186,36 @@ std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
   return new_buf;
 }
 
+void compile(std::vector<unsigned char>& buf) {
+  auto out = std::ofstream{"bf.s"};
+  out << "    .section        __TEXT,__text,regular,pure_instructions\n";
+  out << "    .build_version macos, 14, 0\n";
+  out << "    .globl  _bf_main\n";
+  out << "    .p2align        4, 0x90\n\n";
+  out << "_bf_main:\n";
+  out << "    push   %rbp\n";
+  out << "    mov    %rsp, %rbp\n";
+  out << "    subq   $16, %rsp\n";
+  // int pc = 0;
+  out << "    movl    $0, -4(%rbp)\n";
+  // allocate tape
+  out << "    mov    $100000, %rdi\n";
+  out << "    call   _malloc\n";
+  out << "    mov    %rax, -16(%rbp)\n";
+  // generate code
+  // %r12 callee-saved register
+  // free tape
+  out << "    mov    -16(%rbp), %rdi\n";
+  out << "    call   _free\n";
+  // return 0
+  out << "    xor    %eax, %eax\n";
+  out << "    addq    $16, %rsp\n";
+  out << "    pop    %rbp\n";
+  out << "    ret\n";
+
+  std::cout << "Finished compiling!\n";
+}
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "require input file\n";
@@ -202,6 +232,8 @@ int main(int argc, char** argv) {
 
   if (!strcmp(argv[1], "-p")) {
     profile(buf);
+  } else if (!strcmp(argv[1], "-c")) {
+    compile(buf);
   } else {
     interp(buf, false);
   }
