@@ -1,8 +1,6 @@
 Naive approach
 
 ```
-time ./bf ../brainfuck-benchmark/benches/mandel.b > /dev/null
-
 ________________________________________________________
 Executed in   31.87 secs    fish           external
    usr time   30.76 secs    0.39 millis   30.76 secs
@@ -12,10 +10,17 @@ Executed in   31.87 secs    fish           external
 Pre-compute branch target
 
 ```
-time ./bf ../brainfuck-benchmark/benches/mandel.b > /dev/null
-
 ________________________________________________________
 Executed in   25.38 secs    fish           external
    usr time   25.25 secs    0.51 millis   25.25 secs
    sys time    0.05 secs    1.57 millis    0.05 secs
+```
+
+x86-64 native code
+
+```
+________________________________________________________
+Executed in    3.82 secs    fish           external
+   usr time    3.79 secs    0.36 millis    3.79 secs
+   sys time    0.01 secs    1.57 millis    0.01 secs
 ```
