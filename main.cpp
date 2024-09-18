@@ -249,9 +249,9 @@ void compile(std::vector<unsigned char>& buf) {
   out << "    .section        __TEXT,__text,regular,pure_instructions\n";
   out << "    .build_version macos, 14, 0\n";
   out << "    .globl  _tape\n";
-  out << "    .globl  _bf_main\n";
+  out << "    .globl  _main\n";
   out << "    .p2align        4, 0x90\n\n";
-  out << "_bf_main:\n";
+  out << "_main:\n";
   out << "    push   %rbp\n";
   out << "    mov    %rsp, %rbp\n";
   out << "    subq   $16, %rsp\n";

@@ -61,7 +61,7 @@ Non-simple loops:
 ### Compile
 
 We can compile bf into native x86-64 assembly code with option `-c`. With the use of `exec.sh`, we can compile source bf file into
-assembly file and link with `driver.c` to execute.
+assembly file and generate an executable.
 
 ```
 ./exec.sh brainfuck-benchmark/benches/hello.b
@@ -70,7 +70,7 @@ assembly file and link with `driver.c` to execute.
 + ./build/bf -c brainfuck-benchmark/benches/hello.b
 Finished compiling!
 Normal Termination!
-+ gcc -O3 ./bf.s driver.c -o build/a.out
++ clang -O3 ./bf.s -o build/a.out
 + ./build/a.out
 Hello World!
 + rm ./bf.s
