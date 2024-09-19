@@ -120,37 +120,45 @@ void get_loops(std::vector<unsigned char>& buf) {
   bool leftB = false;
   bool is_simple = false;
   int leftPos = 0;
-  std::string not_simple = "><.,";
+  std::string not_simple = ",.";
   std::string simple = "+-";
   // simple loops
   std::vector<std::pair<int,int>> sl;
   // non simple loops
   std::vector<std::pair<int,int>> nsl;
-  int count = 0;
+  //int count = 0;
+  int shift = 0;
+  int change = 0;
   for (int i = 0; i < buf.size(); i++) {
-    if (count > 1) {
-      is_simple = false;
-    }
-
     char c = buf[i];
     if (c == '[') {
       leftB = true;
       leftPos = i;
       is_simple = true;
-      count = 0;
-    } else if (leftB && c == ']') {
-      int body = pi[leftPos + 1].count;
-      if (is_simple) {
-        sl.push_back(std::make_pair(body, leftPos));
-      } else {
-        nsl.push_back(std::make_pair(body, leftPos));
+      change = 0;
+      shift = 0;
+    } else if (leftB) {
+      if (c == ']') {
+        int body = pi[leftPos + 1].count;
+        if (is_simple && shift == 0 && ((change == 1) || (change == -1))) {
+          sl.push_back(std::make_pair(body, leftPos));
+        } else {
+          nsl.push_back(std::make_pair(body, leftPos));
+        }
+        change = 0;
+        shift = 0;
+        leftB = false;
+      } else if (c == '>') {
+        shift++;
+      } else if (c == '<') {
+        shift--;
+      } else if (c == '+' && shift == 0) {
+        change++;
+      } else if (c == '-' && shift == 0) {
+        change--;
+      } else if (not_simple.find(c) != std::string::npos) {
+        is_simple = false;
       }
-      count = 0;
-      leftB = false;
-    } else if (leftB && not_simple.find(c) != std::string::npos) {
-      is_simple = false;
-    } else if (leftB && simple.find(c) != std::string::npos) {
-      count++;
     }
   }
 
