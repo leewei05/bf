@@ -272,8 +272,6 @@ void compile(std::vector<unsigned char>& buf) {
   out << "    pop    %rbp\n";
   out << "    ret\n";
   out << ".zerofill __DATA,__common,_tape,100000,4\n";
-
-  std::cout << "Finished compiling!\n";
 }
 
 int main(int argc, char** argv) {
@@ -297,8 +295,6 @@ int main(int argc, char** argv) {
   } else {
     interp(buf, false);
   }
-
-  std::cout << "Normal Termination!\n";
 
   return 0;
 }
