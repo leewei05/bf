@@ -18,7 +18,6 @@ struct profile_info {
   unsigned char c;
   unsigned int count;
 };
-struct profile_info pi[SIZE] = {'0', 0};
 std::string bfc = "><+-[].,";
 std::map<int, int> m;
 
@@ -45,8 +44,9 @@ std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
 }
 
 
-void interp(std::vector<unsigned char>& buf, bool p) {
+std::vector<struct profile_info> interp(std::vector<unsigned char>& buf, bool p) {
   int pc = 50000;
+  std::vector<struct profile_info> pi(SIZE);
   for (int i = 0; i < buf.size(); i++) {
     switch (buf[i]) {
       case '>':
@@ -54,7 +54,7 @@ void interp(std::vector<unsigned char>& buf, bool p) {
           die(">: out of bound!");
         }
 
-        pi[i].count++;
+        pi.at(i).count++;
         ++pc;
         break;
       case '<':
@@ -62,35 +62,35 @@ void interp(std::vector<unsigned char>& buf, bool p) {
           die("<: out of bound!");
         }
 
-        pi[i].count++;
+        pi.at(i).count++;
         --pc;
         break;
       case '+':
-        pi[i].count++;
+        pi.at(i).count++;
         ++tape[pc];
         break;
       case '-':
-        pi[i].count++;
+        pi.at(i).count++;
         --tape[pc];
         break;
       case '.':
-        pi[i].count++;
+        pi.at(i).count++;
         if (!p)
           putchar(tape[pc]);
         break;
       case ',':
-        pi[i].count++;
+        pi.at(i).count++;
         if (!p)
           tape[pc] = getchar();
         break;
       case '[':
-        pi[i].count++;
+        pi.at(i).count++;
         if (!tape[pc]) {
           i = m.at(i);
         }
         break;
       case ']':
-        pi[i].count++;
+        pi.at(i).count++;
         if (tape[pc]) {
           i = m.at(i);
         }
@@ -99,6 +99,8 @@ void interp(std::vector<unsigned char>& buf, bool p) {
         break;
     }
   }
+
+  return pi;
 }
 
 void sort_loop_info(std::vector<std::pair<int, int>>& v) {
@@ -118,7 +120,8 @@ void print_loops(std::vector<unsigned char>& buf, std::vector<std::pair<int, int
   }
 }
 
-void get_loops(std::vector<unsigned char>& buf) {
+void get_loops(std::vector<unsigned char>& buf,
+               std::vector<struct profile_info>& pi) {
   bool leftB = false;
   bool is_simple = false;
   int leftPos = 0;
@@ -174,7 +177,7 @@ void get_loops(std::vector<unsigned char>& buf) {
 }
 
 void profile(std::vector<unsigned char>& buf) {
-  interp(buf, true);
+  std::vector<struct profile_info> pi = interp(buf, true);
   std::cout << "Instructions profile:\n";
   for (int i = 0; i < buf.size(); i++) {
     if (bfc.find(buf[i]) != std::string::npos) {
@@ -182,7 +185,7 @@ void profile(std::vector<unsigned char>& buf) {
     }
   }
 
-  get_loops(buf);
+  get_loops(buf, pi);
 }
 
 std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
@@ -279,6 +282,17 @@ void compile(std::vector<unsigned char>& buf) {
   out << ".zerofill __DATA,__common,_tape,100000,4\n";
 }
 
+std::vector<unsigned char> optimize(std::vector<unsigned char>& buf) {
+  std::cout << "optimize!\n";
+  /*
+  while(p.sl.size() == 0) {
+    p = profile(buf);
+    buf = optimize(buf, p);
+  }
+  */
+  return buf;
+}
+
 int main(int argc, char** argv) {
   auto cmd_options = cxxopts::Options{
     argv[0],
@@ -290,6 +304,7 @@ int main(int argc, char** argv) {
       ("i, interp", "Interpret input program", cxxopts::value<bool>()->default_value("true"))
       ("c, compile", "Compile input porgram into x86-64", cxxopts::value<bool>()->default_value("false"))
       ("p, profile", "Profile input porgram", cxxopts::value<bool>()->default_value("false"))
+      ("O, optimize", "Turn on optimization", cxxopts::value<bool>()->default_value("false"))
       ("h, help", "Display available options")
       ;
 
@@ -312,6 +327,10 @@ int main(int argc, char** argv) {
   // remove whitespaces and comments
   std::vector<unsigned char> buf = clean_buf(fbuf);
   m = compute_branch(buf);
+
+  if (opts["optimize"].as<bool>()) {
+    buf = optimize(buf);
+  }
 
   if (opts["profile"].as<bool>()) {
     profile(buf);
