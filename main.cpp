@@ -15,6 +15,10 @@ const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
 
 struct profile_info {
+  std::vector<struct tape_info> ti;
+};
+
+struct tape_info {
   unsigned char c;
   unsigned int count;
 };
@@ -44,9 +48,9 @@ std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
 }
 
 
-std::vector<struct profile_info> interp(std::vector<unsigned char>& buf, bool p) {
+std::vector<struct tape_info> interp(std::vector<unsigned char>& buf, bool p) {
   int pc = 50000;
-  std::vector<struct profile_info> pi(SIZE);
+  std::vector<struct tape_info> ti(SIZE);
   for (int i = 0; i < buf.size(); i++) {
     switch (buf[i]) {
       case '>':
@@ -54,7 +58,7 @@ std::vector<struct profile_info> interp(std::vector<unsigned char>& buf, bool p)
           die(">: out of bound!");
         }
 
-        pi.at(i).count++;
+        ti.at(i).count++;
         ++pc;
         break;
       case '<':
@@ -62,35 +66,35 @@ std::vector<struct profile_info> interp(std::vector<unsigned char>& buf, bool p)
           die("<: out of bound!");
         }
 
-        pi.at(i).count++;
+        ti.at(i).count++;
         --pc;
         break;
       case '+':
-        pi.at(i).count++;
+        ti.at(i).count++;
         ++tape[pc];
         break;
       case '-':
-        pi.at(i).count++;
+        ti.at(i).count++;
         --tape[pc];
         break;
       case '.':
-        pi.at(i).count++;
+        ti.at(i).count++;
         if (!p)
           putchar(tape[pc]);
         break;
       case ',':
-        pi.at(i).count++;
+        ti.at(i).count++;
         if (!p)
           tape[pc] = getchar();
         break;
       case '[':
-        pi.at(i).count++;
+        ti.at(i).count++;
         if (!tape[pc]) {
           i = m.at(i);
         }
         break;
       case ']':
-        pi.at(i).count++;
+        ti.at(i).count++;
         if (tape[pc]) {
           i = m.at(i);
         }
@@ -100,7 +104,7 @@ std::vector<struct profile_info> interp(std::vector<unsigned char>& buf, bool p)
     }
   }
 
-  return pi;
+  return ti;
 }
 
 void sort_loop_info(std::vector<std::pair<int, int>>& v) {
@@ -121,7 +125,7 @@ void print_loops(std::vector<unsigned char>& buf, std::vector<std::pair<int, int
 }
 
 void get_loops(std::vector<unsigned char>& buf,
-               std::vector<struct profile_info>& pi) {
+               std::vector<struct tape_info>& ti) {
   bool leftB = false;
   bool is_simple = false;
   int leftPos = 0;
@@ -144,7 +148,7 @@ void get_loops(std::vector<unsigned char>& buf,
       shift = 0;
     } else if (leftB) {
       if (c == ']') {
-        int body = pi[leftPos + 1].count;
+        int body = ti[leftPos + 1].count;
         if (is_simple && shift == 0 && ((change == 1) || (change == -1))) {
           sl.push_back(std::make_pair(body, leftPos));
         } else {
@@ -176,16 +180,20 @@ void get_loops(std::vector<unsigned char>& buf,
   print_loops(buf, nsl);
 }
 
-void profile(std::vector<unsigned char>& buf) {
-  std::vector<struct profile_info> pi = interp(buf, true);
+void print_profile(std::vector<unsigned char>& buf,
+                   std::vector<struct tape_info>& ti) {
   std::cout << "Instructions profile:\n";
   for (int i = 0; i < buf.size(); i++) {
     if (bfc.find(buf[i]) != std::string::npos) {
-      std::cout << i << ": " << buf[i] << ": " << pi[i].count << "\n";
+      std::cout << i << ": " << buf[i] << ": " << ti[i].count << "\n";
     }
   }
+}
 
-  get_loops(buf, pi);
+std::vector<struct tape_info> profile(std::vector<unsigned char>& buf) {
+  std::vector<struct tape_info> ti = interp(buf, true);
+  get_loops(buf, ti);
+  return ti;
 }
 
 std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
@@ -333,7 +341,8 @@ int main(int argc, char** argv) {
   }
 
   if (opts["profile"].as<bool>()) {
-    profile(buf);
+    auto ti = profile(buf);
+    print_profile(buf, ti);
   } else if (opts["compile"].as<bool>()) {
     compile(buf);
   } else if (opts["interp"].as<bool>()) {
