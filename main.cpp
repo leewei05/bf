@@ -9,6 +9,8 @@
 #include <utility>
 #include <algorithm>
 
+#include <cxxopts.hpp>
+
 const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
 
@@ -231,6 +233,9 @@ void codegen(std::ofstream& out, std::vector<unsigned char>& buf) {
         out << "    movb   %dl, (%rax,%rcx)\n";
         break;
       case '[':
+        // check if loop is simple loop
+        // if yes -> optimize
+        // if no -> generate the following
         out << ".b" << i << ":\n";
         out << "    leaq   _tape(%rip), %rax\n";
         out << "    movslq %r14d, %rcx\n";
@@ -275,24 +280,44 @@ void compile(std::vector<unsigned char>& buf) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    std::cerr << "require input file\n";
-    return 0;
+  auto cmd_options = cxxopts::Options{
+    argv[0],
+    "A simple BF compiler."
+  };
+
+  cmd_options.custom_help("[options] file");
+  cmd_options.add_options()
+      ("i, interp", "Interpret input program", cxxopts::value<bool>()->default_value("true"))
+      ("c, compile", "Compile input porgram into x86-64", cxxopts::value<bool>()->default_value("false"))
+      ("p, profile", "Profile input porgram", cxxopts::value<bool>()->default_value("false"))
+      ("h, help", "Display available options")
+      ;
+
+  auto opts = cmd_options.parse(argc, argv);
+  if (opts.count("help")) {
+    std::cerr << cmd_options.help() << '\n';
+    std::exit(0);
+  }
+
+  auto args = opts.unmatched();
+  if (args.size() == 0) {
+    std::cerr << "no input files" << '\n';
+    std::exit(0);
   }
 
   // TODO: check argc
-  std::ifstream file(argv[argc - 1]);
+  std::ifstream file(args.at(0));
   std::istream_iterator<unsigned char> start(file), end;
   std::vector<unsigned char> fbuf(start, end);
   // remove whitespaces and comments
   std::vector<unsigned char> buf = clean_buf(fbuf);
   m = compute_branch(buf);
 
-  if (!strcmp(argv[1], "-p")) {
+  if (opts["profile"].as<bool>()) {
     profile(buf);
-  } else if (!strcmp(argv[1], "-c")) {
+  } else if (opts["compile"].as<bool>()) {
     compile(buf);
-  } else {
+  } else if (opts["interp"].as<bool>()) {
     interp(buf, false);
   }
 

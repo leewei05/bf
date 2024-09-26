@@ -9,3 +9,6 @@ a.out
 
 # Generated assembly code
 *.s
+
+# CMake dependencies
+_deps

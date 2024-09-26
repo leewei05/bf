@@ -12,4 +12,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+# third-party
+include(FetchContent)
+
+FetchContent_Declare(
+  cxxopts
+  GIT_REPOSITORY https://github.com/jarro2783/cxxopts
+  GIT_TAG        3bf268481da8208d171d8908e6491459de3651d7) # 3.2.1
+FetchContent_MakeAvailable(cxxopts)
+
 add_executable(bf main.cpp)
+target_link_libraries(bf cxxopts)
