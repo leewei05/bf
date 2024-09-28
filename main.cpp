@@ -10,54 +10,19 @@
 #include <utility>
 #include <vector>
 
-const int SIZE = 100000;
-unsigned char tape[SIZE] = {0};
+#include "compiler.hpp"
+#include "global.hpp"
+#include "util.hpp"
 
-struct profile_info {
-  std::vector<struct tape_info> ti;
-};
+/// @brief BF tape
+static unsigned char tape[SIZE] = {0};
 
-struct tape_info {
-  unsigned char c;
-  unsigned int count;
-};
+/// @brief BF character
+static std::string bfc = "><+-[].,";
 
-struct loop_info {
-  int pos;  // position in the buffer
-  enum loop_type {
-    NoShift = 0,  // Simple no shift [-] or [+]
-    Shift,        // Simple with shifts [-<+>]
-    Scan,         // Simple Scan [>>>>] or [<<<<]
-    Other,        // Other Non Simple
-    IO,           // With i/o
-  } type;
-  int count;  // count of the loop body
-};
-
-std::string bfc = "><+-[].,";
-std::map<int, int> m;
-
-std::string loop_type_to_string(int t) {
-  switch (t) {
-    case 0:
-      return "S(No shift)";
-    case 1:
-      return "S(Shift)";
-    case 2:
-      return "NS(Scan)";
-    case 3:
-      return "NS(Other)";
-    case 4:
-      return "NS(I/O)";
-    default:
-      return "N/A";
-  }
-}
-
-void die(std::string msg) {
-  std::cerr << msg << "\n";
-  exit(1);
-}
+namespace {
+/// @brief Match branch targets.
+std::map<int, int> m{};
 
 std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
   std::stack<int> stk;
@@ -75,6 +40,8 @@ std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
 
   return m;
 }
+
+}  // namespace
 
 std::vector<struct tape_info> interp(std::vector<unsigned char>& buf, bool p) {
   int pc = 50000;
@@ -343,14 +310,6 @@ void compile(std::vector<unsigned char>& buf) {
   out << ".zerofill __DATA,__common,_tape,100000,4\n";
 }
 
-void print_buf(std::vector<unsigned char>& buf) {
-  for (auto& b : buf) {
-    std::cout << b;
-  }
-
-  std::cout << '\n';
-}
-
 std::vector<unsigned char> optimize(std::vector<unsigned char>& buf) {
   std::cout << "optimize!\n";
   // auto ti = profile(buf);
@@ -413,6 +372,8 @@ int main(int argc, char** argv) {
   std::vector<unsigned char> buf = clean_buf(fbuf);
   m = compute_branch(buf);
 
+  auto compiler = Compiler(buf);
+
   if (opts["optimize"].as<bool>()) {
     buf = optimize(buf);
   }
@@ -422,7 +383,8 @@ int main(int argc, char** argv) {
   } else if (opts["compile"].as<bool>()) {
     compile(buf);
   } else if (opts["interp"].as<bool>()) {
-    interp(buf, false);
+    // interp(buf, false);
+    compiler.Interp(false);
   }
 
   return 0;

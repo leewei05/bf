@@ -21,5 +21,16 @@ FetchContent_Declare(
   GIT_TAG        3bf268481da8208d171d8908e6491459de3651d7) # 3.2.1
 FetchContent_MakeAvailable(cxxopts)
 
-add_executable(bf main.cpp)
+# include headers
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+)
+
+file(GLOB all_SRCS
+        "${PROJECT_SOURCE_DIR}/include/*.hpp"
+        "${PROJECT_SOURCE_DIR}/src/*.cpp"
+        )
+
+add_executable(bf main.cpp ${all_SRCS})
 target_link_libraries(bf cxxopts)
