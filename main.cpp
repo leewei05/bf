@@ -225,91 +225,6 @@ std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
   return new_buf;
 }
 
-void codegen(std::ofstream& out, std::vector<unsigned char>& buf) {
-  for (int i = 0; i < buf.size(); i++) {
-    switch (buf[i]) {
-      case '>':
-        out << "    addl   $1, %r14d\n";
-        break;
-      case '<':
-        out << "    subl   $1, %r14d\n";
-        break;
-      case '+':
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   (%rax,%rcx), %dl\n";
-        out << "    addb   $1, %dl\n";
-        out << "    movb   %dl, (%rax,%rcx)\n";
-        break;
-      case '-':
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   (%rax,%rcx), %dl\n";
-        out << "    subb   $1, %dl\n";
-        out << "    movb   %dl, (%rax,%rcx)\n";
-        break;
-      case '.':
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movzbl (%rax,%rcx), %edi\n";
-        out << "    callq  _putchar\n";
-        break;
-      case ',':
-        out << "    callq  _getchar\n";
-        out << "    movb   %al, %dl\n";
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   %dl, (%rax,%rcx)\n";
-        break;
-      case '[':
-        // check if loop is simple loop
-        // if yes -> optimize
-        // if no -> generate the following
-        out << ".b" << i << ":\n";
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   (%rax,%rcx), %dl\n";
-        out << "    cmpb   $0, %dl\n";
-        out << "    je     "
-            << ".b" << m.at(i) << "\n";
-        break;
-      case ']':
-        out << ".b" << i << ":\n";
-        out << "    leaq   _tape(%rip), %rax\n";
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   (%rax,%rcx), %dl\n";
-        out << "    cmpb   $0, %dl\n";
-        out << "    jne    "
-            << ".b" << m.at(i) << "\n";
-        break;
-      default:
-        break;
-    }
-  }
-}
-
-void compile(std::vector<unsigned char>& buf) {
-  auto out = std::ofstream{"bf.s"};
-  out << "    .section        __TEXT,__text,regular,pure_instructions\n";
-  out << "    .build_version macos, 14, 0\n";
-  out << "    .globl  _tape\n";
-  out << "    .globl  _main\n";
-  out << "    .p2align        4, 0x90\n\n";
-  out << "_main:\n";
-  out << "    push   %rbp\n";
-  out << "    mov    %rsp, %rbp\n";
-  out << "    subq   $16, %rsp\n";
-  // int pc = 0; %r14d 32 bits
-  out << "    movl   $50000, %r14d\n";
-  codegen(out, buf);
-  // return 0
-  out << "    xor    %eax, %eax\n";
-  out << "    addq   $16, %rsp\n";
-  out << "    pop    %rbp\n";
-  out << "    ret\n";
-  out << ".zerofill __DATA,__common,_tape,100000,4\n";
-}
-
 std::vector<unsigned char> optimize(std::vector<unsigned char>& buf) {
   std::cout << "optimize!\n";
   // auto ti = profile(buf);
@@ -381,7 +296,7 @@ int main(int argc, char** argv) {
   if (opts["profile"].as<bool>()) {
     profile_helper(buf);
   } else if (opts["compile"].as<bool>()) {
-    compile(buf);
+    compiler.Compile();
   } else if (opts["interp"].as<bool>()) {
     // interp(buf, false);
     compiler.Interp(false);
