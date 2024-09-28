@@ -27,50 +27,43 @@ void Profiler::PrintTapeInfo() {
 }
 
 void Profiler::GetLoopInfo() {
-  bool leftB = false;
-  bool is_simple = false;
-  int leftPos = 0;
-  std::string not_simple = ",.";
-  std::string simple = "+-";
-  // simple loops
   std::vector<struct loop_info> sl;
-  // non simple loops
   std::vector<struct loop_info> nsl;
-  // int count = 0;
+  // Is inside loop or not
+  bool leftBrack = false;
+  // Is simple loop or not
+  bool isSimple = false;
+  // Has no > < inside the loop
+  bool noShift = true;
+  // Has only > < inside the loop
+  bool onlyShift = true;
+  // Left Bracket position
+  int leftPos = 0;
+  // Shift position that starts from left bracket
   int shift = 0;
+  // Value change in p[0]
   int change = 0;
-  bool no_shift = true;
-  bool only_shift = true;
   for (int i = 0; i < _buf.size(); i++) {
-    char c = _buf[i];
-    if (c == '[') {
-      leftB = true;
+    switch (_buf.at(i)) {
+    case '[': {
+      leftBrack = true;
+      noShift = true;
+      onlyShift = true;
+      isSimple = true;
       leftPos = i;
-      is_simple = true;
       change = 0;
       shift = 0;
-      no_shift = true;
-      only_shift = true;
-    } else if (leftB) {
-      if (c == ']') {
+    } break;
+    case ']': {
+      if (leftBrack) {
         int body = _ti[leftPos + 1].count;
-        if (is_simple && shift == 0 && ((change == 1) || (change == -1))) {
-          struct loop_info li = {
-              .pos = leftPos,
-              .type = (no_shift ? loop_info::loop_type::NoShift
-                                : loop_info::loop_type::Shift),
-              .count = body,
-          };
+        struct loop_info li = {.pos = leftPos, .count = body};
+        if (isSimple && shift == 0 && ((change == 1) || (change == -1))) {
+          li.type = (noShift ? loop_info::loop_type::NoShift : loop_info::loop_type::Shift);
           sl.push_back(li);
         } else {
-          struct loop_info li = {
-              .pos = leftPos,
-              .type = (only_shift ? loop_info::loop_type::Scan
-                                  : loop_info::loop_type::Other),
-              .count = body,
-          };
-
-          if (!is_simple) {
+          li.type = (onlyShift ? loop_info::loop_type::Scan: loop_info::loop_type::Other);
+          if (!isSimple) {
             li.type = loop_info::loop_type::IO;
           }
 
@@ -78,24 +71,33 @@ void Profiler::GetLoopInfo() {
         }
         change = 0;
         shift = 0;
-        leftB = false;
-      } else if (c == '>') {
-        no_shift = false;
-        shift++;
-      } else if (c == '<') {
-        no_shift = false;
-        shift--;
-      } else if (c == '+' && shift == 0) {
-        change++;
-      } else if (c == '-' && shift == 0) {
-        change--;
-      } else if (c == '+') {
-        only_shift = false;
-      } else if (c == '-') {
-        only_shift = false;
-      } else if (not_simple.find(c) != std::string::npos) {
-        is_simple = false;
+        leftBrack = false;
       }
+    } break;
+    case '>': {
+      noShift = false;
+      shift++;
+    } break;
+    case '<': {
+      noShift = false;
+      shift--;
+    } break;
+    case '+': {
+      onlyShift = false;
+      if (shift == 0) change++; // p[0]++
+    } break;
+    case '-': {
+      onlyShift = false;
+      if (shift == 0) change--; // p[0]--
+    } break;
+    case '.': {
+      isSimple = false;
+    } break;
+    case ',': {
+      isSimple = false;
+    } break;
+    default:
+      break;
     }
   }
 

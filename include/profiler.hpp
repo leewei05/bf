@@ -5,6 +5,19 @@
 
 #include "global.hpp"
 
+/// @brief This struct stores loop info in a BF program.
+struct loop_info {
+  int pos;  // position in the buffer
+  enum loop_type {
+    NoShift = 0,  // Simple no shift [-] or [+]
+    Shift,        // Simple with shifts [-<+>]
+    Scan,         // Simple Scan [>>>>] or [<<<<]
+    Other,        // Other Non Simple
+    IO,           // With i/o
+  } type;
+  int count;  // count of the loop body
+};
+
 class Profiler {
  public:
   Profiler(std::vector<unsigned char>& buf, std::vector<struct tape_info>& ti)
