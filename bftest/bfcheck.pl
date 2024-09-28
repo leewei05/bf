@@ -30,7 +30,7 @@ foreach my $f (@bfs) {
     print "$f\n";
     die unless $f =~ /^prog-([0-9]+).b$/;
     my $num = $1;
-    run1($f);
+    run2($f);
     my $res = system("diff output.dat output-$num.dat");
     if ($res == 0) {
 	++$success;

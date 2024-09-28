@@ -1,15 +1,14 @@
-#include <iostream>
-#include <fstream>
-#include <iterator>
-#include <vector>
-#include <string>
-#include <stack>
-#include <cstring>
-#include <map>
-#include <utility>
 #include <algorithm>
-
+#include <cstring>
 #include <cxxopts.hpp>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
 
 const int SIZE = 100000;
 unsigned char tape[SIZE] = {0};
@@ -22,8 +21,38 @@ struct tape_info {
   unsigned char c;
   unsigned int count;
 };
+
+struct loop_info {
+  int pos;  // position in the buffer
+  enum loop_type {
+    NoShift = 0,  // Simple no shift [-] or [+]
+    Shift,        // Simple with shifts [-<+>]
+    Scan,         // Simple Scan [>>>>] or [<<<<]
+    Other,        // Other Non Simple
+    IO,           // With i/o
+  } type;
+  int count;  // count of the loop body
+};
+
 std::string bfc = "><+-[].,";
 std::map<int, int> m;
+
+std::string loop_type_to_string(int t) {
+  switch (t) {
+    case 0:
+      return "S(No shift)";
+    case 1:
+      return "S(Shift)";
+    case 2:
+      return "NS(Scan)";
+    case 3:
+      return "NS(Other)";
+    case 4:
+      return "NS(I/O)";
+    default:
+      return "N/A";
+  }
+}
 
 void die(std::string msg) {
   std::cerr << msg << "\n";
@@ -46,7 +75,6 @@ std::map<int, int> compute_branch(std::vector<unsigned char>& buf) {
 
   return m;
 }
-
 
 std::vector<struct tape_info> interp(std::vector<unsigned char>& buf, bool p) {
   int pc = 50000;
@@ -107,37 +135,43 @@ std::vector<struct tape_info> interp(std::vector<unsigned char>& buf, bool p) {
   return ti;
 }
 
-void sort_loop_info(std::vector<std::pair<int, int>>& v) {
+void sort_loop_info(std::vector<struct loop_info>& v) {
   std::stable_sort(v.begin(), v.end(),
-  [](const std::pair<int,int>& p1, const std::pair<int,int>& p2)
-  { return p1.first > p2.first; });
+                   [](const struct loop_info& l1, const struct loop_info& l2) {
+                     return l1.count > l2.count;
+                   });
 }
 
-void print_loops(std::vector<unsigned char>& buf, std::vector<std::pair<int, int>> v) {
-  for (auto& [count, pos]: v) {
-    std::cout << pos << ": ";
-    for (int j = pos; j <= m.at(pos); j++) {
-     if (bfc.find(buf[j]) != std::string::npos)
-       std::cout << buf[j];
+void print_loops(std::vector<unsigned char>& buf,
+                 std::vector<struct loop_info> lis) {
+  for (auto& li : lis) {
+    std::cout << li.pos << ": ";
+    for (int j = li.pos; j <= m.at(li.pos); j++) {
+      if (bfc.find(buf[j]) != std::string::npos)
+        std::cout << buf[j];
     }
-    std::cout << ": " << count << "\n";
+    std::cout << ": " << li.count << ": " << loop_type_to_string(li.type)
+              << "\n";
   }
 }
 
-void get_loops(std::vector<unsigned char>& buf,
-               std::vector<struct tape_info>& ti) {
+std::pair<std::vector<struct loop_info>, std::vector<struct loop_info>>
+get_loop_info(std::vector<unsigned char>& buf,
+              std::vector<struct tape_info>& ti) {
   bool leftB = false;
   bool is_simple = false;
   int leftPos = 0;
   std::string not_simple = ",.";
   std::string simple = "+-";
   // simple loops
-  std::vector<std::pair<int,int>> sl;
+  std::vector<struct loop_info> sl;
   // non simple loops
-  std::vector<std::pair<int,int>> nsl;
-  //int count = 0;
+  std::vector<struct loop_info> nsl;
+  // int count = 0;
   int shift = 0;
   int change = 0;
+  bool no_shift = true;
+  bool only_shift = true;
   for (int i = 0; i < buf.size(); i++) {
     char c = buf[i];
     if (c == '[') {
@@ -146,38 +180,57 @@ void get_loops(std::vector<unsigned char>& buf,
       is_simple = true;
       change = 0;
       shift = 0;
+      no_shift = true;
+      only_shift = true;
     } else if (leftB) {
       if (c == ']') {
         int body = ti[leftPos + 1].count;
         if (is_simple && shift == 0 && ((change == 1) || (change == -1))) {
-          sl.push_back(std::make_pair(body, leftPos));
+          struct loop_info li = {
+              .pos = leftPos,
+              .type = (no_shift ? loop_info::loop_type::NoShift
+                                : loop_info::loop_type::Shift),
+              .count = body,
+          };
+          sl.push_back(li);
         } else {
-          nsl.push_back(std::make_pair(body, leftPos));
+          struct loop_info li = {
+              .pos = leftPos,
+              .type = (only_shift ? loop_info::loop_type::Scan
+                                  : loop_info::loop_type::Other),
+              .count = body,
+          };
+
+          if (!is_simple) {
+            li.type = loop_info::loop_type::IO;
+          }
+
+          nsl.push_back(li);
         }
         change = 0;
         shift = 0;
         leftB = false;
       } else if (c == '>') {
+        no_shift = false;
         shift++;
       } else if (c == '<') {
+        no_shift = false;
         shift--;
       } else if (c == '+' && shift == 0) {
         change++;
       } else if (c == '-' && shift == 0) {
         change--;
+      } else if (c == '+') {
+        only_shift = false;
+      } else if (c == '-') {
+        only_shift = false;
       } else if (not_simple.find(c) != std::string::npos) {
         is_simple = false;
       }
     }
   }
 
-  sort_loop_info(sl);
-  std::cout << "\nSimple loops: \n";
-  print_loops(buf, sl);
-
-  sort_loop_info(nsl);
-  std::cout << "\nNon-simple loops: \n";
-  print_loops(buf, nsl);
+  return std::make_pair(sl, nsl);
 }
 
 void print_profile(std::vector<unsigned char>& buf,
@@ -191,9 +244,7 @@ void print_profile(std::vector<unsigned char>& buf,
 }
 
 std::vector<struct tape_info> profile(std::vector<unsigned char>& buf) {
-  std::vector<struct tape_info> ti = interp(buf, true);
-  get_loops(buf, ti);
-  return ti;
+  return interp(buf, true);
 }
 
 std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
@@ -209,7 +260,7 @@ std::vector<unsigned char> clean_buf(std::vector<unsigned char>& buf) {
 
 void codegen(std::ofstream& out, std::vector<unsigned char>& buf) {
   for (int i = 0; i < buf.size(); i++) {
-    switch(buf[i]) {
+    switch (buf[i]) {
       case '>':
         out << "    addl   $1, %r14d\n";
         break;
@@ -252,7 +303,8 @@ void codegen(std::ofstream& out, std::vector<unsigned char>& buf) {
         out << "    movslq %r14d, %rcx\n";
         out << "    movb   (%rax,%rcx), %dl\n";
         out << "    cmpb   $0, %dl\n";
-        out << "    je     " << ".b" << m.at(i) << "\n";
+        out << "    je     "
+            << ".b" << m.at(i) << "\n";
         break;
       case ']':
         out << ".b" << i << ":\n";
@@ -260,7 +312,8 @@ void codegen(std::ofstream& out, std::vector<unsigned char>& buf) {
         out << "    movslq %r14d, %rcx\n";
         out << "    movb   (%rax,%rcx), %dl\n";
         out << "    cmpb   $0, %dl\n";
-        out << "    jne    " << ".b" << m.at(i) << "\n";
+        out << "    jne    "
+            << ".b" << m.at(i) << "\n";
         break;
       default:
         break;
@@ -290,31 +343,55 @@ void compile(std::vector<unsigned char>& buf) {
   out << ".zerofill __DATA,__common,_tape,100000,4\n";
 }
 
+void print_buf(std::vector<unsigned char>& buf) {
+  for (auto& b : buf) {
+    std::cout << b;
+  }
+
+  std::cout << '\n';
+}
+
 std::vector<unsigned char> optimize(std::vector<unsigned char>& buf) {
   std::cout << "optimize!\n";
+  // auto ti = profile(buf);
+  print_buf(buf);
   /*
   while(p.sl.size() == 0) {
     p = profile(buf);
-    buf = optimize(buf, p);
+    buf = transform(buf, p);
   }
   */
   return buf;
 }
 
+void profile_helper(std::vector<unsigned char>& buf) {
+  auto ti = profile(buf);
+  print_profile(buf, ti);
+  auto li = get_loop_info(buf, ti);
+  auto sl = li.first;
+  auto nsl = li.second;
+  sort_loop_info(sl);
+  std::cout << "\nSimple loops: \n";
+  print_loops(buf, sl);
+
+  sort_loop_info(nsl);
+  std::cout << "\nNon-simple loops: \n";
+  print_loops(buf, nsl);
+}
+
 int main(int argc, char** argv) {
-  auto cmd_options = cxxopts::Options{
-    argv[0],
-    "A simple BF compiler."
-  };
+  auto cmd_options = cxxopts::Options{argv[0], "A simple BF compiler."};
 
   cmd_options.custom_help("[options] file");
-  cmd_options.add_options()
-      ("i, interp", "Interpret input program", cxxopts::value<bool>()->default_value("true"))
-      ("c, compile", "Compile input porgram into x86-64", cxxopts::value<bool>()->default_value("false"))
-      ("p, profile", "Profile input porgram", cxxopts::value<bool>()->default_value("false"))
-      ("O, optimize", "Turn on optimization", cxxopts::value<bool>()->default_value("false"))
-      ("h, help", "Display available options")
-      ;
+  cmd_options.add_options()("i, interp", "Interpret input program",
+                            cxxopts::value<bool>()->default_value("true"))(
+      "c, compile", "Compile input porgram into x86-64",
+      cxxopts::value<bool>()->default_value("false"))(
+      "p, profile", "Profile input porgram",
+      cxxopts::value<bool>()->default_value("false"))(
+      "O, optimize", "Turn on optimization",
+      cxxopts::value<bool>()->default_value("false"))(
+      "h, help", "Display available options");
 
   auto opts = cmd_options.parse(argc, argv);
   if (opts.count("help")) {
@@ -341,8 +418,7 @@ int main(int argc, char** argv) {
   }
 
   if (opts["profile"].as<bool>()) {
-    auto ti = profile(buf);
-    print_profile(buf, ti);
+    profile_helper(buf);
   } else if (opts["compile"].as<bool>()) {
     compile(buf);
   } else if (opts["interp"].as<bool>()) {
