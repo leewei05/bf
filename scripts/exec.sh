@@ -1,7 +1,7 @@
 #!/bin/sh
 
 set -x
-make -C build/
+make -j -C build/
 ./build/bf -c $1
 clang -O3 ./bf.s -o build/a.out
 ./build/a.out

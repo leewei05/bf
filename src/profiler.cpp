@@ -45,59 +45,63 @@ void Profiler::GetLoopInfo() {
   int change = 0;
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf.at(i)) {
-    case '[': {
-      leftBrack = true;
-      noShift = true;
-      onlyShift = true;
-      isSimple = true;
-      leftPos = i;
-      change = 0;
-      shift = 0;
-    } break;
-    case ']': {
-      if (leftBrack) {
-        int body = _ti[leftPos + 1].count;
-        struct loop_info li = {.pos = leftPos, .count = body};
-        if (isSimple && shift == 0 && ((change == 1) || (change == -1))) {
-          li.type = (noShift ? loop_info::loop_type::NoShift : loop_info::loop_type::Shift);
-          sl.push_back(li);
-        } else {
-          li.type = (onlyShift ? loop_info::loop_type::Scan: loop_info::loop_type::Other);
-          if (!isSimple) {
-            li.type = loop_info::loop_type::IO;
-          }
-
-          nsl.push_back(li);
-        }
+      case '[': {
+        leftBrack = true;
+        noShift = true;
+        onlyShift = true;
+        isSimple = true;
+        leftPos = i;
         change = 0;
         shift = 0;
-        leftBrack = false;
-      }
-    } break;
-    case '>': {
-      noShift = false;
-      shift++;
-    } break;
-    case '<': {
-      noShift = false;
-      shift--;
-    } break;
-    case '+': {
-      onlyShift = false;
-      if (shift == 0) change++; // p[0]++
-    } break;
-    case '-': {
-      onlyShift = false;
-      if (shift == 0) change--; // p[0]--
-    } break;
-    case '.': {
-      isSimple = false;
-    } break;
-    case ',': {
-      isSimple = false;
-    } break;
-    default:
-      break;
+      } break;
+      case ']': {
+        if (leftBrack) {
+          int body = _ti[leftPos + 1].count;
+          struct loop_info li = {.pos = leftPos, .count = body};
+          if (isSimple && shift == 0 && ((change == 1) || (change == -1))) {
+            li.type = (noShift ? loop_info::loop_type::NoShift
+                               : loop_info::loop_type::Shift);
+            sl.push_back(li);
+          } else {
+            li.type = (onlyShift ? loop_info::loop_type::Scan
+                                 : loop_info::loop_type::Other);
+            if (!isSimple) {
+              li.type = loop_info::loop_type::IO;
+            }
+
+            nsl.push_back(li);
+          }
+          change = 0;
+          shift = 0;
+          leftBrack = false;
+        }
+      } break;
+      case '>': {
+        noShift = false;
+        shift++;
+      } break;
+      case '<': {
+        noShift = false;
+        shift--;
+      } break;
+      case '+': {
+        onlyShift = false;
+        if (shift == 0)
+          change++;  // p[0]++
+      } break;
+      case '-': {
+        onlyShift = false;
+        if (shift == 0)
+          change--;  // p[0]--
+      } break;
+      case '.': {
+        isSimple = false;
+      } break;
+      case ',': {
+        isSimple = false;
+      } break;
+      default:
+        break;
     }
   }
 
