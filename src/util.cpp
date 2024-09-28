@@ -3,12 +3,12 @@
 #include <iostream>
 #include <string>
 
-void die(std::string msg) {
+void Die(std::string msg) {
   std::cerr << msg << "\n";
   std::exit(1);
 }
 
-std::string loop_type_to_string(int t) {
+std::string LoopTyToString(int t) {
   switch (t) {
     case 0:
       return "S(No shift)";
@@ -25,7 +25,7 @@ std::string loop_type_to_string(int t) {
   }
 }
 
-void print_buf(std::vector<unsigned char>& buf) {
+void PrintBuf(std::vector<unsigned char>& buf) {
   for (auto& b : buf) {
     std::cout << b;
   }

@@ -10,6 +10,7 @@ struct tape_info {
   unsigned int count;
 };
 
+// TODO: move to profiler
 /// @brief This struct stores loop info in a BF program.
 struct loop_info {
   int pos;  // position in the buffer

@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "profiler.hpp"
+
 /// @brief Manages compilation, interpret and profiling
 class Compiler {
  public:
@@ -17,6 +19,12 @@ class Compiler {
   /// @note When enabling_profiling is true, it won't perform I/O operations.
   std::vector<struct tape_info> Interp(bool enable_profiling);
 
+  /// @brief Profile BF buffer and print profiling result
+  void Profile();
+
+  /// @brief Optimize BF buffer based on profiling info.
+  void Optimize();
+
   // TODO: add output file
   /// @brief Compile BF into x86-64
   void Compile();
@@ -24,7 +32,10 @@ class Compiler {
  private:
   /// @brief A buffer that stores the entire BF program.
   std::vector<unsigned char> _buf;
+  /// @brief A map that matches branch target in BF.
   std::map<int, int> _target;
+  /// @brief A profiler for profiling BF program.
+  Profiler _profiler;
 
   /// @brief Compute branch target in BF buffer.
   /// @return A map that matches the target. If the key is the address of '[',

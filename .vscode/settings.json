@@ -44,6 +44,7 @@
     "typeinfo": "cpp",
     "vector": "cpp",
     "memory": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "utility": "cpp"
   }
 }

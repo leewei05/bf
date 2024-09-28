@@ -1,11 +1,12 @@
 #include "compiler.hpp"
 
 #include <fstream>
-#include <vector>
 #include <map>
 #include <stack>
+#include <vector>
 
 #include "global.hpp"
+#include "profiler.hpp"
 #include "util.hpp"
 
 /// @brief BF tape
@@ -112,7 +113,7 @@ std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
     switch (_buf[i]) {
       case '>':
         if (pc + 1 > SIZE) {
-          die(">: out of bound!");
+          Die(">: out of bound!");
         }
 
         ti.at(i).count++;
@@ -120,7 +121,7 @@ std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
         break;
       case '<':
         if (pc - 1 < 0) {
-          die("<: out of bound!");
+          Die("<: out of bound!");
         }
 
         ti.at(i).count++;
@@ -164,7 +165,17 @@ std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
   return ti;
 }
 
-void Compiler::Compile(){
+void Compiler::Profile() {
+  auto ti = Interp(true);
+  Profiler p(_buf, ti);
+  p.RunProfile();
+}
+
+void Compiler::Optimize() {
+  std::cout << "optimize!\n";
+}
+
+void Compiler::Compile() {
   auto out = std::ofstream{"bf.s"};
   out << "    .section        __TEXT,__text,regular,pure_instructions\n";
   out << "    .build_version macos, 14, 0\n";
