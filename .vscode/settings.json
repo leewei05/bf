@@ -45,6 +45,25 @@
     "vector": "cpp",
     "memory": "cpp",
     "algorithm": "cpp",
-    "utility": "cpp"
+    "utility": "cpp",
+    "array": "cpp",
+    "unordered_map": "cpp",
+    "__hash_table": "cpp",
+    "charconv": "cpp",
+    "complex": "cpp",
+    "cstdarg": "cpp",
+    "cwctype": "cpp",
+    "execution": "cpp",
+    "forward_list": "cpp",
+    "future": "cpp",
+    "iomanip": "cpp",
+    "optional": "cpp",
+    "queue": "cpp",
+    "ratio": "cpp",
+    "regex": "cpp",
+    "set": "cpp",
+    "sstream": "cpp",
+    "unordered_set": "cpp",
+    "variant": "cpp"
   }
 }

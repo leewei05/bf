@@ -19,6 +19,9 @@ class Compiler {
   /// @note When enabling_profiling is true, it won't perform I/O operations.
   std::vector<struct tape_info> Interp(bool enable_profiling);
 
+  /// @brief Dump BF buffer.
+  void Dump();
+
   /// @brief Profile BF buffer and print profiling result
   void Profile();
 
@@ -45,6 +48,9 @@ class Compiler {
 
   /// @brief Generate x86-64 from BF buffer.
   void CodeGen(std::ofstream& out);
+
+  /// @brief Starting from index and return a vector of IR.
+  std::vector<unsigned char> ComputeIR(int index);
 };
 
 #endif  // COMPILER_HPP_

@@ -37,7 +37,7 @@ void Profiler::PrintTapeInfo() {
   std::cout << "Instructions profile:\n";
   for (int i = 0; i < _buf.size(); i++) {
     if (bfc.find(_buf[i]) != std::string::npos) {
-      std::cout << i << ": " << _buf.at(i) << ": " << _ti.at(i).count << "\n";
+      std::cout << i << ": " << _buf.at(i) << "\n";
     }
   }
 }
@@ -72,8 +72,8 @@ void Profiler::GetLoopInfo() {
       } break;
       case ']': {
         if (leftBrack) {
-          int body = _ti[leftPos + 1].count;
-          struct loop_info li = {.pos = leftPos, .count = body};
+          // int body = _ti[leftPos + 1].count;
+          struct loop_info li = {.pos = leftPos, .count = 0};
           if (isSimple && shift == 0 && ((change == 1) || (change == -1))) {
             li.type = (noShift ? loop_info::loop_type::NoShift
                                : loop_info::loop_type::Shift);
@@ -145,7 +145,7 @@ void PrintLoop(std::vector<unsigned char>& buf,
       j++;
     }
     std::cout << buf[j];  // print ]
-    std::cout << ": " << li.count << ": " << LoopTyToString(li.type) << "\n";
+    std::cout << ": " << LoopTyToString(li.type) << "\n";
   }
 }
 }  // namespace

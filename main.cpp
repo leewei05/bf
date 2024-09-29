@@ -24,6 +24,8 @@ int main(int argc, char** argv) {
       cxxopts::value<bool>()->default_value("false"))(
       "p, profile", "Profile input porgram",
       cxxopts::value<bool>()->default_value("false"))(
+      "d, dump", "Dump BF buffer",
+      cxxopts::value<bool>()->default_value("false"))(
       "O, optimize", "Turn on optimization",
       cxxopts::value<bool>()->default_value("false"))(
       "h, help", "Display available options");
@@ -46,11 +48,16 @@ int main(int argc, char** argv) {
   std::vector<unsigned char> fbuf(start, end);
   auto compiler = Compiler(fbuf);
 
+  // optimize only with compile
   if (opts["optimize"].as<bool>()) {
     compiler.Optimize();
+    compiler.Compile();
+    return 0;
   }
 
-  if (opts["profile"].as<bool>()) {
+  if (opts["dump"].as<bool>()) {
+    compiler.Dump();
+  } else if (opts["profile"].as<bool>()) {
     compiler.Profile();
   } else if (opts["compile"].as<bool>()) {
     compiler.Compile();

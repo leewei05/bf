@@ -12,7 +12,7 @@ struct loop_info {
   enum loop_type {
     NoShift = 0,  // Simple no shift [-] or [+]
     Shift,        // Simple with shifts [-<+>]
-    Scan,         // Simple Scan [>>>>] or [<<<<]
+    Scan,         // Non Simple Scan [>>>>] or [<<<<]
     Other,        // Other Non Simple
     IO,           // With i/o
   } type;
@@ -21,8 +21,8 @@ struct loop_info {
 
 class Profiler {
  public:
-  Profiler(std::vector<unsigned char>& buf, std::vector<struct tape_info>& ti)
-      : _buf{buf}, _ti{ti} {}
+  Profiler(std::vector<unsigned char>& buf)
+      : _buf{buf} {}
 
   Profiler() = default;
 
@@ -33,7 +33,7 @@ class Profiler {
 
  private:
   std::vector<unsigned char> _buf;
-  std::vector<struct tape_info> _ti;
+  // std::vector<struct tape_info> _ti;
   /// @brief Loop info for simple loops.
   std::vector<struct loop_info> _sl;
   /// @brief Loop info for non-simple loops.

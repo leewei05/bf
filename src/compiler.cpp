@@ -4,13 +4,12 @@
 #include <map>
 #include <stack>
 #include <vector>
+#include <cassert>
 
 #include "global.hpp"
 #include "profiler.hpp"
 #include "util.hpp"
 
-/// @brief BF tape
-static unsigned char tape[SIZE] = {0};
 /// @brief BF character
 static std::string bfc = "><+-[].,";
 
@@ -46,6 +45,13 @@ void Compiler::CleanBuf() {
 void Compiler::CodeGen(std::ofstream& out) {
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
+      case 'z':
+        out << "    # optimized [-] or [+]\n";
+        out << "    leaq   _tape(%rip), %rax\n";
+        out << "    movslq %r14d, %rcx\n";
+        out << "    movb   $0, %dl\n";
+        out << "    movb   %dl, (%rax,%rcx)\n";
+        break;
       case '>':
         out << "    addl   $1, %r14d\n";
         break;
@@ -108,6 +114,8 @@ void Compiler::CodeGen(std::ofstream& out) {
 
 std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
   int pc = 50000;
+  unsigned char tape[SIZE] = {0};
+  ComputeBranch();
   std::vector<struct tape_info> ti(SIZE);
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
@@ -167,42 +175,65 @@ std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
   return ti;
 }
 
+void Compiler::Dump() {
+  PrintBuf(_buf);
+}
+
 void Compiler::Profile() {
-  auto ti = Interp(true);
-  Profiler p(_buf, ti);
+  ComputeBranch();
+  Profiler p(_buf);
   p.RunProfile();
+}
+
+std::vector<unsigned char> Compiler::ComputeIR(int index) {
+  std::vector<unsigned char> v;
+  v.push_back('z');
+  index++;
+  int shift = 0;
+  int change = 0;
+  while (index < _buf.size() && _buf.at(index) != ']') {
+    v.push_back(_buf.at(index));
+    std::cout << _buf.at(index);
+    index++;
+  }
+  index++;
+  std::cout << '\n';
+  return v;
 }
 
 void Compiler::Optimize() {
   std::cout << "optimize!\n";
-  std::vector<unsigned char> old_buf = _buf;
-  do {
-    auto ti = Interp(true);
-    Profiler p(_buf, ti);
+
+  while(true) {
+    ComputeBranch();
+    Profiler p(_buf);
     auto m = p.RunProfileGetLoopInfo();
+    std::vector<unsigned char> new_buf;
     for (int i = 0; i < _buf.size(); i++) {
-      switch (_buf[i]) {
-        case '>':
-          break;
-        case '<':
-          break;
-        case '+':
-          break;
-        case '-':
-          break;
-        case '.':
-          break;
-        case ',':
-          break;
-        case '[':
-          break;
-        case ']':
-          break;
-        default:
-          break;
+      if (_buf[i] == '[' && m.count(i) != 0) {
+        auto li = m.at(i);
+        if (li.type == loop_info::NoShift) {
+          new_buf.push_back('z');
+          i++;
+          i++;
+        } else {
+          new_buf.push_back(_buf[i]);
+        }
+      } else {
+        new_buf.push_back(_buf[i]);
       }
     }
-  } while (old_buf != _buf);
+    //std::cout << "original: " << _buf.size() << "\n";
+    //PrintBuf(_buf);
+    //std::cout << "new: " << new_buf.size() << "\n";
+    //PrintBuf(new_buf);
+
+    if (new_buf == _buf) {
+      break;
+    } else {
+      _buf = new_buf;
+    }
+  }
 }
 
 void Compiler::Compile() {
