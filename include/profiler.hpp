@@ -2,6 +2,7 @@
 #define PROFILER_HPP_
 
 #include <vector>
+#include <map>
 
 #include "global.hpp"
 
@@ -25,8 +26,10 @@ class Profiler {
 
   Profiler() = default;
 
-  /// @brief Run profiling on BF buffer
+  /// @brief Run profiling on BF buffer.
   void RunProfile();
+  /// @brief Run profiling and return loop info map.
+  std::map<int, struct loop_info> RunProfileGetLoopInfo();
 
  private:
   std::vector<unsigned char> _buf;

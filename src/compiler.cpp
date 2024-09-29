@@ -137,13 +137,15 @@ std::vector<struct tape_info> Compiler::Interp(bool enable_profiling) {
         break;
       case '.':
         ti.at(i).count++;
-        if (!enable_profiling)
+        if (!enable_profiling) {
           putchar(tape[pc]);
+        }
         break;
       case ',':
         ti.at(i).count++;
-        if (!enable_profiling)
+        if (!enable_profiling) {
           tape[pc] = getchar();
+        }
         break;
       case '[':
         ti.at(i).count++;
@@ -173,6 +175,34 @@ void Compiler::Profile() {
 
 void Compiler::Optimize() {
   std::cout << "optimize!\n";
+  std::vector<unsigned char> old_buf = _buf;
+  do {
+    auto ti = Interp(true);
+    Profiler p(_buf, ti);
+    auto m = p.RunProfileGetLoopInfo();
+    for (int i = 0; i < _buf.size(); i++) {
+      switch (_buf[i]) {
+        case '>':
+          break;
+        case '<':
+          break;
+        case '+':
+          break;
+        case '-':
+          break;
+        case '.':
+          break;
+        case ',':
+          break;
+        case '[':
+          break;
+        case ']':
+          break;
+        default:
+          break;
+      }
+    }
+  } while (old_buf != _buf);
 }
 
 void Compiler::Compile() {

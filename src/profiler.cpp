@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <utility>
+#include <map>
 
 #include "global.hpp"
 #include "util.hpp"
@@ -15,6 +16,21 @@ void Profiler::RunProfile() {
   GetLoopInfo();
   SortLoopInfo();
   PrintLoopInfo();
+}
+
+std::map<int, struct loop_info> Profiler::RunProfileGetLoopInfo() {
+  GetLoopInfo();
+
+  std::map<int, struct loop_info> m;
+  for (auto& sli : _sl) {
+    m[sli.pos] = sli;
+  }
+
+  for (auto& nsli : _nsl) {
+    m[nsli.pos] = nsli;
+  }
+
+  return m;
 }
 
 void Profiler::PrintTapeInfo() {

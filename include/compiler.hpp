@@ -34,8 +34,6 @@ class Compiler {
   std::vector<unsigned char> _buf;
   /// @brief A map that matches branch target in BF.
   std::map<int, int> _target;
-  /// @brief A profiler for profiling BF program.
-  Profiler _profiler;
 
   /// @brief Compute branch target in BF buffer.
   /// @return A map that matches the target. If the key is the address of '[',
