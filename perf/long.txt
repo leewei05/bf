@@ -1,0 +1,26 @@
+long baseline
+
+real	0m9.891s
+user	0m9.088s
+sys	0m0.222s
+
+----------------------------------------
+long loop optimization
+
+real	0m5.531s
+user	0m4.748s
+sys	0m0.234s
+
+----------------------------------------
+long vector optimization
+
+real	0m0.892s
+user	0m0.454s
+sys	0m0.147s
+
+----------------------------------------
+long both optimizations
+
+real	0m5.062s
+user	0m4.616s
+sys	0m0.162s

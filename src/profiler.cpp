@@ -1,9 +1,9 @@
 #include "profiler.hpp"
 
 #include <iostream>
+#include <map>
 #include <string>
 #include <utility>
-#include <map>
 
 #include "global.hpp"
 #include "util.hpp"

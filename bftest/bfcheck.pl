@@ -18,7 +18,7 @@ sub run1($) {
 
 sub run2($) {
     (my $f) = @_;
-    system("../build/bf -c $f");
+    system("../build/bf -l -c $f");
     system("clang bf.s -O -o bf");
     system("./bf < input.dat > output.dat 2>/dev/null");
 }

@@ -7,4 +7,4 @@ clang -O3 -g ./bf.s -o build/a.out
 ./build/a.out
 
 # clean up
-rm ./bf.s
+# rm ./bf.s

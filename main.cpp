@@ -26,7 +26,11 @@ int main(int argc, char** argv) {
       cxxopts::value<bool>()->default_value("false"))(
       "d, dump", "Dump BF buffer",
       cxxopts::value<bool>()->default_value("false"))(
-      "O, optimize", "Turn on optimization",
+      "v, voptimize", "Turn on vector optimization",
+      cxxopts::value<bool>()->default_value("false"))(
+      "l, loptimize", "Turn on loop optimization",
+      cxxopts::value<bool>()->default_value("false"))(
+      "O, optimize", "Turn on both vector and loop optimization",
       cxxopts::value<bool>()->default_value("false"))(
       "h, help", "Display available options");
 
@@ -48,10 +52,19 @@ int main(int argc, char** argv) {
   std::vector<unsigned char> fbuf(start, end);
   auto compiler = Compiler(fbuf);
 
-  // optimize only with compile
+  // optimize with both loop and vector
   if (opts["optimize"].as<bool>()) {
-    compiler.Optimize();
-    compiler.Compile();
+    compiler.Optimize(true);
+    compiler.Compile(true);
+    return 0;
+  }
+  if (opts["voptimize"].as<bool>()) {
+    compiler.Compile(true);
+    return 0;
+  }
+  if (opts["loptimize"].as<bool>()) {
+    compiler.Optimize(true);
+    compiler.Compile(false);
     return 0;
   }
 
@@ -60,7 +73,7 @@ int main(int argc, char** argv) {
   } else if (opts["profile"].as<bool>()) {
     compiler.Profile();
   } else if (opts["compile"].as<bool>()) {
-    compiler.Compile();
+    compiler.Compile(false);
   } else if (opts["interp"].as<bool>()) {
     compiler.Interp(false);
   }

@@ -1,0 +1,26 @@
+serptri baseline
+
+real	0m0.822s
+user	0m0.434s
+sys	0m0.134s
+
+----------------------------------------
+serptri loop optimization
+
+real	0m0.806s
+user	0m0.441s
+sys	0m0.130s
+
+----------------------------------------
+serptri vector optimization
+
+real	0m0.807s
+user	0m0.439s
+sys	0m0.133s
+
+----------------------------------------
+serptri both optimizations
+
+real	0m0.846s
+user	0m0.435s
+sys	0m0.129s

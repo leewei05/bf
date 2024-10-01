@@ -1,10 +1,10 @@
 #include "compiler.hpp"
 
+#include <cassert>
 #include <fstream>
 #include <map>
 #include <stack>
 #include <vector>
-#include <cassert>
 
 #include "global.hpp"
 #include "profiler.hpp"
@@ -42,11 +42,94 @@ void Compiler::CleanBuf() {
   _buf = std::move(new_buf);
 }
 
-void Compiler::CodeGen(std::ofstream& out) {
+namespace {
+  int VectorScan(std::ofstream& out, int i, unsigned char c) {
+    if (c == '>') {
+      // set tape[pc]
+      out << "    # scan [>]\n";
+      out << "    jmp  .b" << i << "\n";
+      out << ".znf" << i << ":\n";
+      out << "    addl     $8, %r14d\n";
+      out << ".b" << i << ":\n";
+      out << "    leaq   _tape(%rip), %rax\n";
+      out << "    movslq %r14d, %rcx\n";
+      out << "    movzbl (%rax,%rcx), %edx\n";
+      out << "    vmovd  %edx, %xmm0\n";  // store tape[pc] to e0
+      for (int j = 1; j <= 7; j++) {
+        // pc++
+        out << "    addl   $1, %r14d\n";
+        out << "    leaq   _tape(%rip), %rax\n";
+        out << "    movslq %r14d, %rcx\n";
+        out << "    movzbl (%rax,%rcx), %edx\n";
+        out << "    vpinsrb $" << j
+            << ", %edx, %xmm0, %xmm0\n";  // store tape[pc] to ej
+      }
+      // set xmm1 to all zeros
+      out << "    pxor %xmm1, %xmm1\n";
+      // cmp xmm1 and xmm0 each byte
+      out << "    pcmpeqb %xmm1, %xmm0\n";  // results are stored in
+                                            // xmm0
+      out << "    pmovmskb %xmm0, %eax\n";
+      out << "    tzcntl %eax, %eax\n";  // eax stores the position
+                                         // relative to pc
+      // if zero is not found
+      out << "    cmpb    $8, %al\n";
+      out << "    je .znf" << i << "\n";
+      // add offset to pc
+      out << "    addl    %eax, %r14d\n";
+      // print zero location
+      out << "    mov     %eax, %edi\n";
+      out << "    addl   $48, %edi\n";
+      out << "    callq  _putchar\n";
+    } else if (c == '<') {
+      out << "    # scan [<]\n";
+      out << "    jmp  .b" << i << "\n";
+      out << ".znf" << i << ":\n";
+      out << "    subl     $8, %r14d\n";
+      out << ".b" << i << ":\n";
+      // set tape[pc]
+      out << "    leaq   _tape(%rip), %rax\n";
+      out << "    movslq %r14d, %rcx\n";
+      out << "    movzbl (%rax,%rcx), %edx\n";
+      out << "    vmovd  %edx, %xmm0\n";  // store tape[pc] to e0
+      //for (int j = 7; j >= 1; j--) {
+      for (int j = 1; j <= 7; j++) {
+        // pc++
+        out << "    subl   $1, %r14d\n";
+        out << "    leaq   _tape(%rip), %rax\n";
+        out << "    movslq %r14d, %rcx\n";
+        out << "    movzbl (%rax,%rcx), %edx\n";
+        out << "    vpinsrb $" << j
+            << ", %edx, %xmm0, %xmm0\n";  // store tape[pc] to ej
+      }
+      // set xmm1 to all zeros
+      out << "    pxor %xmm1, %xmm1\n";
+      // cmp xmm1 and xmm0 each byte
+      out << "    pcmpeqb %xmm1, %xmm0\n";  // results are stored in
+                                            // xmm0
+      out << "    pmovmskb %xmm0, %eax\n";
+      out << "    tzcntl %eax, %eax\n";  // eax stores the position
+                                         // relative to pc
+      // if zero is not found
+      out << "    cmpb    $8, %al\n";
+      out << "    je .znf" << i << "\n";
+      // sub offset to pc
+      out << "    subl    %eax, %r14d\n";
+      // print zero location
+      out << "    mov     %eax, %edi\n";
+      out << "    addl   $48, %edi\n";
+      out << "    callq  _putchar\n";
+    }
+    return i + 3;
+  }
+} // namespace
+
+void Compiler::CodeGen(std::ofstream& out, bool sopt) {
+  ComputeBranch();
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
       case 'z':
-        out << "    # z\n";
+        out << "    # optimize z\n";
         out << "    leaq   _tape(%rip), %rax\n";
         out << "    movslq %r14d, %rcx\n";
         out << "    movb   $0, %dl\n";
@@ -85,89 +168,12 @@ void Compiler::CodeGen(std::ofstream& out) {
         out << "    movslq %r14d, %rcx\n";
         out << "    movb   %dl, (%rax,%rcx)\n";
         break;
-      case '[':
+      case '[': {
         // scan [>] or [<]
-        if (i + 2 == _target.at(i)) {
-          if (_buf.at(i + 1) == '>') {
-            // set tape[pc]
-            out << "    # scan [>]\n";
-            out << "    jmp  .b" << i << "\n";
-            out << ".znf" << i << ":\n";
-            out << "    addl     $8, %r14d\n";
-            out << ".b" << i << ":\n";
-            out << "    leaq   _tape(%rip), %rax\n";
-            out << "    movslq %r14d, %rcx\n";
-            out << "    movzbl (%rax,%rcx), %edx\n";
-            out << "    vmovd  %edx, %xmm0\n"; // store tape[pc] to e0
-            for (int j = 1; j < 7; j++) {
-              // pc++
-              out << "    addl   $1, %r14d\n";
-              out << "    leaq   _tape(%rip), %rax\n";
-              out << "    movslq %r14d, %rcx\n";
-              out << "    movzbl (%rax,%rcx), %edx\n";
-              out << "    vpinsrb $" << j << ", %edx, %xmm0, %xmm0\n"; // store tape[pc] to ej
-            }
-            // set xmm1 to all zeros
-            out << "    pxor %xmm1, %xmm1\n";
-            // cmp xmm1 and xmm0 each byte
-            out << "    pcmpeqb %xmm1, %xmm0\n"; // results are stored in xmm0
-            out << "    pmovmskb %xmm0, %eax\n";
-            out << "    tzcntl %eax, %eax\n"; // eax stores the position relative to pc
-            // if zero is not found
-            out << "    cmpb    $7, %al\n";
-            out << "    je .znf" << i << "\n";
-            // add offset to pc
-            out << "    addl    %eax, %r14d\n";
-            // print zero location
-            // out << "    mov     %eax, %edi\n";
-            // out << "    addl   $48, %edi\n";
-            // out << "    callq  _putchar\n";
-            i = i + 3;
-          } else if (_buf.at(i + 1) == '<') {
-            // set tape[pc]
-            out << "    # scan [<]\n";
-            out << "    jmp  .b" << i << "\n";
-            out << ".znf" << i << ":\n";
-            out << "    subl     $8, %r14d\n";
-            out << ".b" << i << ":\n";
-            out << "    leaq   _tape(%rip), %rax\n";
-            out << "    movslq %r14d, %rcx\n";
-            out << "    movzbl (%rax,%rcx), %edx\n";
-            out << "    vmovd  %edx, %xmm0\n"; // store tape[pc] to e0
-            for (int j = 7; j < 1; j--) {
-              // pc++
-              out << "    subl   $1, %r14d\n";
-              out << "    leaq   _tape(%rip), %rax\n";
-              out << "    movslq %r14d, %rcx\n";
-              out << "    movzbl (%rax,%rcx), %edx\n";
-              out << "    vpinsrb $" << j << ", %edx, %xmm0, %xmm0\n"; // store tape[pc] to ej
-            }
-            // set xmm1 to all zeros
-            out << "    pxor %xmm1, %xmm1\n";
-            // cmp xmm1 and xmm0 each byte
-            out << "    pcmpeqb %xmm1, %xmm0\n"; // results are stored in xmm0
-            out << "    pmovmskb %xmm0, %eax\n";
-            out << "    tzcntl %eax, %eax\n"; // eax stores the position relative to pc
-            // if zero is not found
-            out << "    cmpb    $7, %al\n";
-            out << "    je .znf" << i << "\n";
-            // sub offset to pc
-            out << "    subl    %eax, %r14d\n";
-            // out << "    mov     %eax, %edi\n";
-            // out << "    addl   $48, %edi\n";
-            // out << "    callq  _putchar\n";
-            i = i + 3;
-          } else {
-            out << ".b" << i << ":\n";
-            out << "    leaq   _tape(%rip), %rax\n";
-            out << "    movslq %r14d, %rcx\n";
-            out << "    movb   (%rax,%rcx), %dl\n";
-            out << "    cmpb   $0, %dl\n";
-            out << "    je     "
-                << ".b" << _target.at(i) << "\n";
-          }
+        char c = _buf.at(i + 1);
+        if (sopt && _buf.at(i + 2) == ']' && (c == '>' || c == '<')) {
+          i = VectorScan(out, i, c);
         } else {
-          // if no -> generate the following
           out << ".b" << i << ":\n";
           out << "    leaq   _tape(%rip), %rax\n";
           out << "    movslq %r14d, %rcx\n";
@@ -176,7 +182,7 @@ void Compiler::CodeGen(std::ofstream& out) {
           out << "    je     "
               << ".b" << _target.at(i) << "\n";
         }
-        break;
+      } break;
       case ']':
         out << ".b" << i << ":\n";
         out << "    leaq   _tape(%rip), %rax\n";
@@ -267,14 +273,11 @@ void Compiler::Profile() {
 
 std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   std::vector<unsigned char> v;
-  //for (int k = l; k < r; k++) {
-  //  std::cout << _buf[k];
-  //}
-  //std::cout << '\n';
 
   int i = l;
   int j = r - 1;
-  while (_buf[j] == '<' || _buf[j] == '>') j--;
+  while (_buf[j] == '<' || _buf[j] == '>')
+    j--;
 
   i += 2;
   char curr = _buf[i];
@@ -308,39 +311,27 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   }
 
   v.push_back('z');
-  //PrintBuf(v);
+  // PrintBuf(v);
   return v;
 }
 
-void Compiler::Optimize() {
+void Compiler::Optimize(bool lopts) {
   std::cout << "optimize!\n";
 
-  while(true) {
+  while (true) {
     ComputeBranch();
     Profiler p(_buf);
     auto m = p.RunProfileGetLoopInfo();
     std::vector<unsigned char> new_buf;
     for (int i = 0; i < _buf.size(); i++) {
-      if (_buf[i] == '[' && m.count(i) != 0) {
-        auto li = m.at(i);
-        if (li.type == loop_info::NoShift) {
+        if (_buf[i] == '[' && _buf[i + 2] == ']' && (_buf[i + 1] == '+' || _buf[i + 1] == '-')) {
           new_buf.push_back('z');
           i++;
           i++;
-        } else if (li.type == loop_info::Shift) {
-          std::vector<unsigned char> v = ComputeIR(i, _target.at(i));
-          new_buf.push_back(_buf[i]);
         } else {
           new_buf.push_back(_buf[i]);
         }
-      } else {
-        new_buf.push_back(_buf[i]);
-      }
     }
-    //std::cout << "original: " << _buf.size() << "\n";
-    //PrintBuf(_buf);
-    //std::cout << "new: " << new_buf.size() << "\n";
-    //PrintBuf(new_buf);
 
     if (new_buf == _buf) {
       break;
@@ -350,7 +341,7 @@ void Compiler::Optimize() {
   }
 }
 
-void Compiler::Compile() {
+void Compiler::Compile(bool sopt) {
   auto out = std::ofstream{"bf.s"};
   out << "    .section        __TEXT,__text,regular,pure_instructions\n";
   out << "    .build_version macos, 14, 0\n";
@@ -362,12 +353,12 @@ void Compiler::Compile() {
   out << "    mov    %rsp, %rbp\n";
   out << "    subq   $16, %rsp\n";
   // int pc = 0; %r14d 32 bits
-  out << "    movl   $50000, %r14d\n";
-  CodeGen(out);
+  out << "    movl   $150000, %r14d\n";
+  CodeGen(out, sopt);
   // return 0
   out << "    xor    %eax, %eax\n";
   out << "    addq   $16, %rsp\n";
   out << "    pop    %rbp\n";
   out << "    ret\n";
-  out << ".zerofill __DATA,__common,_tape,100000,4\n";
+  out << ".zerofill __DATA,__common,_tape,300000,4\n";
 }

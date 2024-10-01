@@ -1,0 +1,26 @@
+mandel baseline
+
+real	0m4.832s
+user	0m4.317s
+sys	0m0.167s
+
+----------------------------------------
+mandel loop optimization
+
+real	0m4.727s
+user	0m4.288s
+sys	0m0.153s
+
+----------------------------------------
+mandel vector optimization
+
+real	0m0.885s
+user	0m0.460s
+sys	0m0.148s
+
+----------------------------------------
+mandel both optimizations
+
+real	0m4.836s
+user	0m4.269s
+sys	0m0.178s

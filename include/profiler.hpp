@@ -1,8 +1,8 @@
 #ifndef PROFILER_HPP_
 #define PROFILER_HPP_
 
-#include <vector>
 #include <map>
+#include <vector>
 
 #include "global.hpp"
 
@@ -21,8 +21,7 @@ struct loop_info {
 
 class Profiler {
  public:
-  Profiler(std::vector<unsigned char>& buf)
-      : _buf{buf} {}
+  Profiler(std::vector<unsigned char>& buf) : _buf{buf} {}
 
   Profiler() = default;
 

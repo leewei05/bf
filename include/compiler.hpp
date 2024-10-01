@@ -26,11 +26,11 @@ class Compiler {
   void Profile();
 
   /// @brief Optimize BF buffer based on profiling info.
-  void Optimize();
+  void Optimize(bool lopt = false);
 
   // TODO: add output file
   /// @brief Compile BF into x86-64
-  void Compile();
+  void Compile(bool sopt);
 
  private:
   /// @brief A buffer that stores the entire BF program.
@@ -47,7 +47,7 @@ class Compiler {
   void CleanBuf();
 
   /// @brief Generate x86-64 from BF buffer.
-  void CodeGen(std::ofstream& out);
+  void CodeGen(std::ofstream& out, bool sopt);
 
   /// @brief Starting from index and return a vector of IR.
   std::vector<unsigned char> ComputeIR(int l, int r);
