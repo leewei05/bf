@@ -50,7 +50,7 @@ class Compiler {
   void CodeGen(std::ofstream& out);
 
   /// @brief Starting from index and return a vector of IR.
-  std::vector<unsigned char> ComputeIR(int index);
+  std::vector<unsigned char> ComputeIR(int l, int r);
 };
 
 #endif  // COMPILER_HPP_
