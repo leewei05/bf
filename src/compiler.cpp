@@ -131,29 +131,53 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
   ComputeBranch();
   //std::cout << "Codegen:" <<  _buf.size() <<"\n";
   //PrintBuf(_buf);
-  bool r = false;  // right = true, left = false
-  bool a = false;  // add = true, subtract = false
-  bool addr = false;
-  bool val = false;
-  int at = 0;
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
-      case 'r':
-        r = true;
-        addr = true;
-        break;
-      case 'l':
-        r = false;
-        addr = true;
-        break;
-      case 'a':
-        a = true;
-        val = true;
-        break;
-      case 's':
-        a = false;
-        val = true;
-        break;
+      case 'r': {
+        // r1a7r2a:r3a3r4a1z
+        int at = _buf[i + 1] - '0';
+        unsigned char a = _buf[i + 2];
+        int c = _buf[i + 3] - '0';
+        out << "    # optimize r\n";
+        out << "    leaq   _tape(%rip), %rax\n";  // rax = tape addr
+        out << "    movslq %r14d, %rcx\n";
+        out << "    movb   (%rax,%rcx), %dl\n";  // dl = tape[0]
+        out << "    addl   $" << at << ", %r14d\n";
+        out << "    movslq %r14d, %r10\n";
+        out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
+        for (int i = 0; i < c; i++) {
+          if (a == 'a') {
+            out << "    addb   %dl, %bl\n";
+          } else if (a == 's') {
+            out << "    subb   %dl, %bl\n";
+          }
+        }
+        out << "    movb   %bl, (%rax,%r10)\n";
+        out << "    subl   $" << at << ", %r14d\n";
+        i = i + 3;
+      } break;
+      case 'l': {
+        int at = _buf[i + 1] - '0';
+        unsigned char a = _buf[i + 2];
+        int c = _buf[i + 3] - '0';
+        out << "    # optimize r\n";
+        out << "    leaq   _tape(%rip), %rax\n";  // rax = tape addr
+        out << "    movslq %r14d, %rcx\n";
+        out << "    movb   (%rax,%rcx), %dl\n";  // dl = tape[0]
+        out << "    subl   $" << at << ", %r14d\n";
+        out << "    movslq %r14d, %r10\n";
+        out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
+        for (int i = 0; i < c; i++) {
+          if (a == 'a') {
+            out << "    addb   %dl, %bl\n";
+          } else if (a == 's') {
+            out << "    subb   %dl, %bl\n";
+          }
+        }
+        out << "    movb   %bl, (%rax,%r10)\n";
+        out << "    addl   $" << at << ", %r14d\n";
+        i = i + 3;
+      } break;
       case 'z':
         out << "    # optimize z\n";
         out << "    leaq   _tape(%rip), %rax\n";
@@ -219,43 +243,7 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
             << ".b" << _target.at(i) << "\n";
         break;
       default: {
-        int c = _buf[i] - '{';
-        // std::cout << "diff: " << c << '\n';
-
-        if (addr && val) {
-          out << "    # optimize simple loop\n";
-          out << "    leaq   _tape(%rip), %rax\n";  // rax = tape addr
-          out << "    movslq %r14d, %rcx\n";
-          out << "    movb   (%rax,%rcx), %dl\n";  // dl = tape[0]
-          if (r) {
-            out << "    addl   $" << at << ", %r14d\n";
-          } else {
-            out << "    subl   $" << at << ", %r14d\n";
-          }
-          out << "    movslq %r14d, %r10\n";
-          out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
-          for (int i = 0; i < c; i++) {
-            if (a) {
-              out << "    addb   %dl, %bl\n";
-            } else {
-              out << "    subb   %dl, %bl\n";
-            }
-          }
-          out << "    movb   %bl, (%rax,%r10)\n";  // store value back
-                                                   // tape[target]
-
-          // move back
-          if (r) {
-            out << "    subl   $" << at << ", %r14d\n";
-          } else {
-            out << "    addl   $" << at << ", %r14d\n";
-          }
-          addr = false;
-          val = false;
-          at = 0;
-        } else if (addr) {
-          at = c;
-        }
+        std::cout << "default: " << _buf[i] << '\n';
       } break;
     }
   }
@@ -364,14 +352,14 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
       } else {
         v.push_back('r');
       }
-      v.push_back(std::abs(shift) + '{'); // 123
+      v.push_back(std::abs(shift) + '0'); // 123
       // std::cout << "shift amount:" << std::abs(shift) << "\n";
       if (change < 0) {
         v.push_back('s');
       } else {
         v.push_back('a');
       }
-      v.push_back(std::abs(change) + '{');
+      v.push_back(std::abs(change) + '0');
     noGen:
       currShift = c;
       change = 0;

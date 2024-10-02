@@ -7,6 +7,13 @@
 
 #include "profiler.hpp"
 
+struct ir {
+  bool right;
+  int shift;
+  bool add;
+  int change;
+};
+
 /// @brief Manages compilation, interpret and profiling
 class Compiler {
  public:
