@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
   // optimize with both loop and vector
   if (opts["optimize"].as<bool>()) {
-    compiler.Optimize(true);
+    compiler.Optimize();
     compiler.Compile(true);
     return 0;
   }
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     return 0;
   }
   if (opts["loptimize"].as<bool>()) {
-    compiler.Optimize(true);
+    compiler.Optimize();
     compiler.Compile(false);
     return 0;
   }

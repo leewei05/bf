@@ -26,7 +26,7 @@ class Compiler {
   void Profile();
 
   /// @brief Optimize BF buffer based on profiling info.
-  void Optimize(bool lopt = false);
+  void Optimize();
 
   // TODO: add output file
   /// @brief Compile BF into x86-64

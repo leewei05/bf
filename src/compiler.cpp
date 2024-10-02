@@ -44,6 +44,9 @@ void Compiler::CleanBuf() {
 
 namespace {
   int VectorScan(std::ofstream& out, int i, unsigned char c) {
+    // put a label
+    // byte mask for input, 1, 2, 4
+    // backword subtract offset first
     if (c == '>') {
       // set tape[pc]
       out << "    # scan [>]\n";
@@ -126,8 +129,31 @@ namespace {
 
 void Compiler::CodeGen(std::ofstream& out, bool sopt) {
   ComputeBranch();
+  std::cout << "Codegen:\n";
+  PrintBuf(_buf);
+  bool r = false; // right = true, left = false
+  bool a = false; // add = true, subtract = false
+  bool addr = false;
+  bool val = false;
+  int at = 0;
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
+      case 'r':
+        r = true;
+        addr = true;
+        break;
+      case 'l':
+        r = false;
+        addr = true;
+        break;
+      case 'a':
+        a = true;
+        val = true;
+        break;
+      case 's':
+        a = false;
+        val = true;
+        break;
       case 'z':
         out << "    # optimize z\n";
         out << "    leaq   _tape(%rip), %rax\n";
@@ -192,8 +218,44 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
         out << "    jne    "
             << ".b" << _target.at(i) << "\n";
         break;
-      default:
-        break;
+      default: {
+        int c = _buf[i] - '0';
+        // std::cout << c;
+
+        if (addr && val) {
+          out << "    # optimize simple loop\n";
+          out << "    leaq   _tape(%rip), %rax\n"; // rax = tape addr
+          out << "    movslq %r14d, %rcx\n";
+          out << "    movb   (%rax,%rcx), %dl\n"; // dl = tape[0]
+          if (r) {
+            out << "    addl   $" << at << ", %r14d\n";
+          } else {
+            out << "    subl   $" << at << ", %r14d\n";
+          }
+          out << "    movslq %r14d, %rcx\n";
+          out << "    movb   (%rax,%rcx), %bl\n"; // bl = tape[0 + c or 0 - c]
+          for (int i = 0; i < c; i++) {
+            if (a) {
+              out << "    addb   %dl, %bl\n";
+            } else {
+              out << "    subb   %dl, %bl\n";
+            }
+          }
+          out << "    movb   %bl, (%rax,%rcx)\n"; // store value back tape[target]
+
+          // move back
+          if (r) {
+            out << "    subl   $" << at << ", %r14d\n";
+          } else {
+            out << "    addl   $" << at << ", %r14d\n";
+          }
+          addr = false;
+          val = false;
+          at = 0;
+        } else if (addr) {
+          at = c;
+        }
+      } break;
     }
   }
 }
@@ -273,66 +335,104 @@ void Compiler::Profile() {
 
 std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   std::vector<unsigned char> v;
-
+  // ignore [ the first - or +
   int i = l;
-  int j = r - 1;
-  while (_buf[j] == '<' || _buf[j] == '>')
-    j--;
-
-  i += 2;
-  char curr = _buf[i];
-  int shift = 1;
+  int j = r;
+  //for (int k = i; k <=j; ++k) {
+  //  std::cout << _buf[k];
+  //}
+  //std::cout << '\n';
+  char currShift = '0';
+  int shift = 0;
   int change = 0;
+  bool endShift = false;
   i++;
   while (i <= j) {
-    if (curr == _buf[i]) {
-      shift++;
-    } else if (curr != _buf[i]) {
-      v.push_back('a');
-      if (curr == '<') {
-        v.push_back('n');
+    char c = _buf[i];
+    if (change == 0) {
+      //if (currShift == c && c == '>') {
+      //  shift++;
+      //} else if (currShift == c && c == '<') {
+      //  shift--;
+      //}
+      if (c == '>') {
+        shift++;
+      } else if (c == '<') {
+        shift--;
       }
-      v.push_back(shift + '0');
+    }
+
+    if (change != 0 && (c == '>' || c == '<') && endShift) {
+      if (shift < 0) {
+        v.push_back('l');
+      } else {
+        v.push_back('r');
+      }
+      v.push_back(std::abs(shift) + '0');
       if (change < 0) {
         v.push_back('s');
       } else {
-        v.push_back('p');
+        v.push_back('a');
       }
-      v.push_back(change + '0');
-      curr = _buf[i];
-      shift = 1;
+      v.push_back(std::abs(change) + '0');
+      currShift = c;
       change = 0;
-    } else if (_buf[i] == '+') {
+      endShift = false;
+      if (c == '>') {
+        shift++;
+      } else if (c == '<') {
+        shift--;
+      }
+    }
+
+    if (c == '+') {
       change++;
-    } else if (_buf[i] == '-') {
+      endShift = true;
+    } else if (c == '-') {
       change--;
+      endShift = true;
     }
     i++;
   }
 
-  v.push_back('z');
-  // PrintBuf(v);
+  // v.push_back('z');
+  PrintBuf(v);
   return v;
 }
 
-void Compiler::Optimize(bool lopts) {
+void Compiler::Optimize() {
   std::cout << "optimize!\n";
 
+  // one pass first
   while (true) {
     ComputeBranch();
     Profiler p(_buf);
     auto m = p.RunProfileGetLoopInfo();
     std::vector<unsigned char> new_buf;
-    for (int i = 0; i < _buf.size(); i++) {
+    int i = 0;
+    while (i < _buf.size()){
         if (_buf[i] == '[' && _buf[i + 2] == ']' && (_buf[i + 1] == '+' || _buf[i + 1] == '-')) {
           new_buf.push_back('z');
           i++;
           i++;
+        } else if (_buf[i] == '[' && m.count(i) != 0 && m.at(i).type == loop_info::Shift) {
+          // Simple loop with shifts
+          int rb = _target.at(i);
+          std::vector<unsigned char> v = ComputeIR(i, rb);
+          // PrintBuf(v);
+          new_buf.insert(new_buf.end(), v.begin(), v.end());
+          i = rb + 1;
+          // new_buf.push_back(_buf[i]);
         } else {
           new_buf.push_back(_buf[i]);
+          i++;
         }
     }
 
+    std::cout << "original:\n";
+    PrintBuf(_buf);
+    std::cout << "new:\n";
+    PrintBuf(new_buf);
     if (new_buf == _buf) {
       break;
     } else {
