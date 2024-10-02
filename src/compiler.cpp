@@ -129,8 +129,8 @@ int VectorScan(std::ofstream& out, int i, unsigned char c) {
 
 void Compiler::CodeGen(std::ofstream& out, bool sopt) {
   ComputeBranch();
-  std::cout << "Codegen:\n";
-  PrintBuf(_buf);
+  //std::cout << "Codegen:" <<  _buf.size() <<"\n";
+  //PrintBuf(_buf);
   bool r = false;  // right = true, left = false
   bool a = false;  // add = true, subtract = false
   bool addr = false;
@@ -219,8 +219,8 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
             << ".b" << _target.at(i) << "\n";
         break;
       default: {
-        int c = _buf[i] - '0';
-        // std::cout << c;
+        int c = _buf[i] - '{';
+        // std::cout << "diff: " << c << '\n';
 
         if (addr && val) {
           out << "    # optimize simple loop\n";
@@ -232,8 +232,8 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
           } else {
             out << "    subl   $" << at << ", %r14d\n";
           }
-          out << "    movslq %r14d, %rcx\n";
-          out << "    movb   (%rax,%rcx), %bl\n";  // bl = tape[0 + c or 0 - c]
+          out << "    movslq %r14d, %r10\n";
+          out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
           for (int i = 0; i < c; i++) {
             if (a) {
               out << "    addb   %dl, %bl\n";
@@ -241,7 +241,7 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
               out << "    subb   %dl, %bl\n";
             }
           }
-          out << "    movb   %bl, (%rax,%rcx)\n";  // store value back
+          out << "    movb   %bl, (%rax,%r10)\n";  // store value back
                                                    // tape[target]
 
           // move back
@@ -348,11 +348,6 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   while (i <= j) {
     char c = _buf[i];
     if (change == 0) {
-      // if (currShift == c && c == '>') {
-      //   shift++;
-      // } else if (currShift == c && c == '<') {
-      //   shift--;
-      // }
       if (c == '>') {
         shift++;
       } else if (c == '<') {
@@ -369,13 +364,14 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
       } else {
         v.push_back('r');
       }
-      v.push_back(std::abs(shift) + '0');
+      v.push_back(std::abs(shift) + '{'); // 123
+      // std::cout << "shift amount:" << std::abs(shift) << "\n";
       if (change < 0) {
         v.push_back('s');
       } else {
         v.push_back('a');
       }
-      v.push_back(std::abs(change) + '0');
+      v.push_back(std::abs(change) + '{');
     noGen:
       currShift = c;
       change = 0;
@@ -399,11 +395,11 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
 
   v.push_back('z');
 
-  for (int k = l; k <= r; ++k) {
-    std::cout << _buf[k];
-  }
-  std::cout << '\n';
-  PrintBuf(v);
+  //for (int k = l; k <= r; ++k) {
+  //  std::cout << _buf[k];
+  //}
+  //std::cout << '\n';
+  // PrintBuf(v);
   return v;
 }
 
@@ -435,10 +431,10 @@ void Compiler::Optimize() {
     }
   }
 
-  std::cout << "original:\n";
-  PrintBuf(_buf);
-  std::cout << "new:\n";
-  PrintBuf(new_buf);
+  //std::cout << "original:\n";
+  //PrintBuf(_buf);
+  //std::cout << "new:\n";
+  //PrintBuf(new_buf);
   if (new_buf != _buf) {
     _buf = new_buf;
     ComputeBranch();
@@ -457,12 +453,12 @@ void Compiler::Compile(bool sopt) {
   out << "    mov    %rsp, %rbp\n";
   out << "    subq   $16, %rsp\n";
   // int pc = 0; %r14d 32 bits
-  out << "    movl   $150000, %r14d\n";
+  out << "    movl   $160000, %r14d\n";
   CodeGen(out, sopt);
   // return 0
   out << "    xor    %eax, %eax\n";
   out << "    addq   $16, %rsp\n";
   out << "    pop    %rbp\n";
   out << "    ret\n";
-  out << ".zerofill __DATA,__common,_tape,300000,4\n";
+  out << ".zerofill __DATA,__common,_tape,320000,4\n";
 }
