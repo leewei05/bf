@@ -129,54 +129,38 @@ int VectorScan(std::ofstream& out, int i, unsigned char c) {
 
 void Compiler::CodeGen(std::ofstream& out, bool sopt) {
   ComputeBranch();
-  //std::cout << "Codegen:" <<  _buf.size() <<"\n";
+  //std::cout << "Codegen:"  <<"\n";
   //PrintBuf(_buf);
   for (int i = 0; i < _buf.size(); i++) {
     switch (_buf[i]) {
-      case 'r': {
-        // r1a7r2a:r3a3r4a1z
-        int at = _buf[i + 1] - '0';
-        unsigned char a = _buf[i + 2];
-        int c = _buf[i + 3] - '0';
-        out << "    # optimize r\n";
+      case 'y': {
+        struct ir info = _ir.at(i);
+        int at = info.shift;
+        int c = info.change;
+        out << "    # optimize y\n";
         out << "    leaq   _tape(%rip), %rax\n";  // rax = tape addr
         out << "    movslq %r14d, %rcx\n";
         out << "    movb   (%rax,%rcx), %dl\n";  // dl = tape[0]
-        out << "    addl   $" << at << ", %r14d\n";
+        if (info.right) {
+          out << "    addl   $" << at << ", %r14d\n";
+        } else {
+          out << "    subl   $" << at << ", %r14d\n";
+        }
         out << "    movslq %r14d, %r10\n";
         out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
         for (int i = 0; i < c; i++) {
-          if (a == 'a') {
+          if (info.add) {
             out << "    addb   %dl, %bl\n";
-          } else if (a == 's') {
+          } else {
             out << "    subb   %dl, %bl\n";
           }
         }
         out << "    movb   %bl, (%rax,%r10)\n";
-        out << "    subl   $" << at << ", %r14d\n";
-        i = i + 3;
-      } break;
-      case 'l': {
-        int at = _buf[i + 1] - '0';
-        unsigned char a = _buf[i + 2];
-        int c = _buf[i + 3] - '0';
-        out << "    # optimize r\n";
-        out << "    leaq   _tape(%rip), %rax\n";  // rax = tape addr
-        out << "    movslq %r14d, %rcx\n";
-        out << "    movb   (%rax,%rcx), %dl\n";  // dl = tape[0]
-        out << "    subl   $" << at << ", %r14d\n";
-        out << "    movslq %r14d, %r10\n";
-        out << "    movb   (%rax,%r10), %bl\n";  // bl = tape[0 + c or 0 - c]
-        for (int i = 0; i < c; i++) {
-          if (a == 'a') {
-            out << "    addb   %dl, %bl\n";
-          } else if (a == 's') {
-            out << "    subb   %dl, %bl\n";
-          }
+        if (info.right) {
+          out << "    subl   $" << at << ", %r14d\n";
+        } else {
+          out << "    addl   $" << at << ", %r14d\n";
         }
-        out << "    movb   %bl, (%rax,%r10)\n";
-        out << "    addl   $" << at << ", %r14d\n";
-        i = i + 3;
       } break;
       case 'z':
         out << "    # optimize z\n";
@@ -322,9 +306,10 @@ void Compiler::Profile() {
   p.RunProfile();
 }
 
-std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
-  std::vector<unsigned char> v;
+std::vector<struct ir> Compiler::ComputeIR(std::vector<unsigned char>& v, int l, int r) {
   // ignore [ the first - or +
+  // std::map<int, struct ir> m;
+  std::vector<struct ir> infos;
   int i = l;
   int j = r;
 
@@ -344,23 +329,35 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
     }
 
     if (change != 0 && (c == '>' || c == '<') && endShift) {
+      struct ir info = {
+        .right = shift > 0,
+        .shift = std::abs(shift),
+        .add = change > 0,
+        .change = std::abs(change),
+      };
+
       if (shift == 0) {
         goto noGen;
       }
-      if (shift < 0) {
-        v.push_back('l');
-      } else {
-        v.push_back('r');
-      }
-      v.push_back(std::abs(shift) + '0'); // 123
-      // std::cout << "shift amount:" << std::abs(shift) << "\n";
-      if (change < 0) {
-        v.push_back('s');
-      } else {
-        v.push_back('a');
-      }
-      v.push_back(std::abs(change) + '0');
-    noGen:
+
+      v.push_back('y');
+      info.index = v.size() - 1;
+      infos.push_back(info);
+      // m.insert({v.size() - 1, info});
+      //if (shift < 0) {
+      //  v.push_back('l');
+      //} else {
+      //  v.push_back('r');
+      //}
+      //v.push_back(std::abs(shift) + '0'); // 123
+      //// std::cout << "shift amount:" << std::abs(shift) << "\n";
+      //if (change < 0) {
+      //  v.push_back('s');
+      //} else {
+      //  v.push_back('a');
+      //}
+      //v.push_back(std::abs(change) + '0');
+noGen:
       currShift = c;
       change = 0;
       endShift = false;
@@ -387,8 +384,7 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   //  std::cout << _buf[k];
   //}
   //std::cout << '\n';
-  // PrintBuf(v);
-  return v;
+  return infos;
 }
 
 void Compiler::Optimize() {
@@ -398,6 +394,7 @@ void Compiler::Optimize() {
   Profiler p(_buf);
   auto m = p.RunProfileGetLoopInfo();
   std::vector<unsigned char> new_buf;
+  std::map<int, struct ir> ir;
   int i = 0;
   while (i < _buf.size()) {
     if (_buf[i] == '[' && _buf[i + 2] == ']' &&
@@ -408,17 +405,26 @@ void Compiler::Optimize() {
                m.at(i).type == loop_info::Shift) {
       // Simple loop with shifts
       int rb = _target.at(i);
-      std::vector<unsigned char> v = ComputeIR(i, rb);
-      // PrintBuf(v);
-      new_buf.insert(new_buf.end(), v.begin(), v.end());
+      std::vector<struct ir> infos = ComputeIR(new_buf, i, rb);
+      for (struct ir info : infos) {
+        struct ir n = {
+          .index = info.index,
+          .right = info.right,
+          .shift = info.shift,
+          .add = info.add,
+          .change = info.change,
+        };
+        ir.insert({info.index, n});
+      }
+
       i = rb + 1;
-      // new_buf.push_back(_buf[i]);
     } else {
       new_buf.push_back(_buf[i]);
       i++;
     }
   }
 
+  _ir = ir;
   //std::cout << "original:\n";
   //PrintBuf(_buf);
   //std::cout << "new:\n";

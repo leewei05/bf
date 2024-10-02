@@ -8,6 +8,7 @@
 #include "profiler.hpp"
 
 struct ir {
+  int index;
   bool right;
   int shift;
   bool add;
@@ -44,6 +45,8 @@ class Compiler {
   std::vector<unsigned char> _buf;
   /// @brief A map that matches branch target in BF.
   std::map<int, int> _target;
+  /// @brief A map that matches branch to codegen info.
+  std::map<int, struct ir> _ir;
 
   /// @brief Compute branch target in BF buffer.
   /// @return A map that matches the target. If the key is the address of '[',
@@ -57,7 +60,7 @@ class Compiler {
   void CodeGen(std::ofstream& out, bool sopt);
 
   /// @brief Starting from index and return a vector of IR.
-  std::vector<unsigned char> ComputeIR(int l, int r);
+  std::vector<struct ir> ComputeIR(std::vector<unsigned char>&v , int l, int r);
 };
 
 #endif  // COMPILER_HPP_
