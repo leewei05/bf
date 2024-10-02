@@ -338,10 +338,7 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
   // ignore [ the first - or +
   int i = l;
   int j = r;
-  //for (int k = i; k <=j; ++k) {
-  //  std::cout << _buf[k];
-  //}
-  //std::cout << '\n';
+
   char currShift = '0';
   int shift = 0;
   int change = 0;
@@ -363,6 +360,9 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
     }
 
     if (change != 0 && (c == '>' || c == '<') && endShift) {
+      if (shift == 0) {
+        goto noGen;
+      }
       if (shift < 0) {
         v.push_back('l');
       } else {
@@ -375,6 +375,7 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
         v.push_back('a');
       }
       v.push_back(std::abs(change) + '0');
+noGen:
       currShift = c;
       change = 0;
       endShift = false;
@@ -395,7 +396,12 @@ std::vector<unsigned char> Compiler::ComputeIR(int l, int r) {
     i++;
   }
 
-  // v.push_back('z');
+  v.push_back('z');
+
+  for (int k = l; k <=r; ++k) {
+    std::cout << _buf[k];
+  }
+  std::cout << '\n';
   PrintBuf(v);
   return v;
 }
@@ -413,8 +419,7 @@ void Compiler::Optimize() {
     while (i < _buf.size()){
         if (_buf[i] == '[' && _buf[i + 2] == ']' && (_buf[i + 1] == '+' || _buf[i + 1] == '-')) {
           new_buf.push_back('z');
-          i++;
-          i++;
+          i += 3;
         } else if (_buf[i] == '[' && m.count(i) != 0 && m.at(i).type == loop_info::Shift) {
           // Simple loop with shifts
           int rb = _target.at(i);
