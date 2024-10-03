@@ -12,11 +12,14 @@ for (my $i=0; $i<$N; ++$i) {
 	if ($j != $i) {
 	    print $OUTF "+";
 	}
-	print $OUTF ">";
-    }
-    for (my $j=0; $j<$BIG; ++$j) {
+	#print $OUTF ">";
 	print $OUTF "<";
     }
-    print $OUTF "[>]";
+    for (my $j=0; $j<$BIG; ++$j) {
+	#print $OUTF "<";
+	print $OUTF ">";
+    }
+    #print $OUTF "[>]";
+    print $OUTF "[<]";
     close $OUTF;
 }

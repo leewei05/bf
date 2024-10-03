@@ -1,26 +1,26 @@
 deadcodetest baseline
 
-real	0m1.081s
-user	0m0.501s
-sys	0m0.171s
+real	0m1.198s
+user	0m0.745s
+sys	0m0.199s
 
 ----------------------------------------
 deadcodetest loop optimization
 
-real	0m0.922s
-user	0m0.476s
-sys	0m0.164s
+real	0m1.284s
+user	0m0.751s
+sys	0m0.198s
 
 ----------------------------------------
 deadcodetest vector optimization
 
-real	0m0.970s
-user	0m0.499s
-sys	0m0.188s
+real	0m1.222s
+user	0m0.759s
+sys	0m0.209s
 
 ----------------------------------------
 deadcodetest both optimizations
 
-real	0m0.830s
-user	0m0.433s
-sys	0m0.132s
+real	0m1.234s
+user	0m0.750s
+sys	0m0.198s

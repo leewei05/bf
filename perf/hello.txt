@@ -1,26 +1,26 @@
 hello baseline
 
-real	0m0.966s
-user	0m0.483s
-sys	0m0.160s
+real	0m1.457s
+user	0m0.843s
+sys	0m0.243s
 
 ----------------------------------------
 hello loop optimization
 
-real	0m1.099s
-user	0m0.472s
-sys	0m0.162s
+real	0m1.305s
+user	0m0.794s
+sys	0m0.214s
 
 ----------------------------------------
 hello vector optimization
 
-real	0m0.769s
-user	0m0.429s
-sys	0m0.131s
+real	0m1.440s
+user	0m0.827s
+sys	0m0.230s
 
 ----------------------------------------
 hello both optimizations
 
-real	0m0.765s
-user	0m0.430s
-sys	0m0.130s
+real	0m1.417s
+user	0m0.842s
+sys	0m0.230s

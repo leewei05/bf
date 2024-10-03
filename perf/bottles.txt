@@ -1,26 +1,26 @@
 bottles baseline
 
-real	0m0.841s
-user	0m0.467s
-sys	0m0.138s
+real	0m1.487s
+user	0m0.920s
+sys	0m0.265s
 
 ----------------------------------------
 bottles loop optimization
 
-real	0m0.819s
-user	0m0.453s
-sys	0m0.129s
+real	0m1.504s
+user	0m0.834s
+sys	0m0.236s
 
 ----------------------------------------
 bottles vector optimization
 
-real	0m0.766s
-user	0m0.421s
-sys	0m0.127s
+real	0m1.327s
+user	0m0.825s
+sys	0m0.227s
 
 ----------------------------------------
 bottles both optimizations
 
-real	0m0.820s
-user	0m0.455s
-sys	0m0.133s
+real	0m1.282s
+user	0m0.796s
+sys	0m0.217s

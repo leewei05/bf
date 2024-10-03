@@ -44,86 +44,58 @@ void Compiler::CleanBuf() {
 
 namespace {
 int VectorScan(std::ofstream& out, int i, unsigned char c) {
-  // put a label
-  // byte mask for input, 1, 2, 4
-  // backword subtract offset first
+  out << "    # vector scan\n";
+  out << "    xorl %r15d, %r15d\n";            // 15d accumulates offsets always positive
+  out << "    jmp  .vec" << i << "\n";
+  out << ".znf" << i << ":\n";
+  out << "    addl    $16, %r15d\n";         // add to r15
   if (c == '>') {
-    // set tape[pc]
-    out << "    # scan [>]\n";
-    out << "    jmp  .b" << i << "\n";
-    out << ".znf" << i << ":\n";
-    out << "    addl     $8, %r14d\n";
-    out << ".b" << i << ":\n";
-    out << "    leaq   _tape(%rip), %rax\n";
-    out << "    movslq %r14d, %rcx\n";
-    out << "    movzbl (%rax,%rcx), %edx\n";
-    out << "    vmovd  %edx, %xmm0\n";  // store tape[pc] to e0
-    for (int j = 1; j <= 7; j++) {
-      // pc++
-      out << "    addl   $1, %r14d\n";
-      out << "    leaq   _tape(%rip), %rax\n";
-      out << "    movslq %r14d, %rcx\n";
-      out << "    movzbl (%rax,%rcx), %edx\n";
-      out << "    vpinsrb $" << j
-          << ", %edx, %xmm0, %xmm0\n";  // store tape[pc] to ej
-    }
-    // set xmm1 to all zeros
-    out << "    pxor %xmm1, %xmm1\n";
-    // cmp xmm1 and xmm0 each byte
-    out << "    pcmpeqb %xmm1, %xmm0\n";  // results are stored in
-                                          // xmm0
-    out << "    pmovmskb %xmm0, %eax\n";
-    out << "    tzcntl %eax, %eax\n";  // eax stores the position
-                                       // relative to pc
-    // if zero is not found
-    out << "    cmpb    $8, %al\n";
-    out << "    je .znf" << i << "\n";
-    // add offset to pc
-    out << "    addl    %eax, %r14d\n";
-    // print zero location
-    out << "    mov     %eax, %edi\n";
-    out << "    addl   $48, %edi\n";
-    out << "    callq  _putchar\n";
+    out << "    addl    $16, %r14d\n";
   } else if (c == '<') {
-    out << "    # scan [<]\n";
-    out << "    jmp  .b" << i << "\n";
-    out << ".znf" << i << ":\n";
-    out << "    subl     $8, %r14d\n";
-    out << ".b" << i << ":\n";
-    // set tape[pc]
-    out << "    leaq   _tape(%rip), %rax\n";
-    out << "    movslq %r14d, %rcx\n";
-    out << "    movzbl (%rax,%rcx), %edx\n";
-    out << "    vmovd  %edx, %xmm0\n";  // store tape[pc] to e0
-    // for (int j = 7; j >= 1; j--) {
-    for (int j = 1; j <= 7; j++) {
-      // pc++
-      out << "    subl   $1, %r14d\n";
-      out << "    leaq   _tape(%rip), %rax\n";
-      out << "    movslq %r14d, %rcx\n";
-      out << "    movzbl (%rax,%rcx), %edx\n";
-      out << "    vpinsrb $" << j
-          << ", %edx, %xmm0, %xmm0\n";  // store tape[pc] to ej
-    }
-    // set xmm1 to all zeros
-    out << "    pxor %xmm1, %xmm1\n";
-    // cmp xmm1 and xmm0 each byte
-    out << "    pcmpeqb %xmm1, %xmm0\n";  // results are stored in
-                                          // xmm0
-    out << "    pmovmskb %xmm0, %eax\n";
-    out << "    tzcntl %eax, %eax\n";  // eax stores the position
-                                       // relative to pc
-    // if zero is not found
-    out << "    cmpb    $8, %al\n";
-    out << "    je .znf" << i << "\n";
-    // sub offset to pc
-    out << "    subl    %eax, %r14d\n";
-    // print zero location
-    out << "    mov     %eax, %edi\n";
-    out << "    addl   $48, %edi\n";
-    out << "    callq  _putchar\n";
+    out << "    subl    $16, %r14d\n";
   }
-  return i + 3;
+  out << ".vec" << i << ":\n";
+  out << "    leaq   _tape(%rip), %rax\n";    // get _tape addr
+  out << "    movslq %r14d, %rcx\n";
+  out << "    movzbl (%rax,%rcx), %edx\n";
+  if (c == '<') {
+    // this should be 15, changing it would cause EXC_I386_GPFLT
+    out << "    subl    $16, %r14d\n";         // move left 16 offset and load data
+  }
+  out << "    vmovdqa .vs1(%rip), %xmm0\n";   // indices 15 - 0
+  out << "    movslq %r14d, %rcx\n";          // get pc
+  out << "    pxor %xmm1, %xmm1\n";           // clear input
+  out << "    movdqa (%rax, %rcx), %xmm1\n";  // load data
+  if (c == '<') {
+    out << "    psrldq $1, %xmm1\n";                 // shift right by 1 byte to remove offset 16
+    out << "    vpinsrb $15, %edx, %xmm1, %xmm1\n";  // store tape[pc] to e15
+  }
+  out << "    movdq2q %xmm0, %mm0\n";
+  out << "    pxor %xmm2, %xmm2\n";           // xmm2 all zeros
+  out << "    pcmpeqb %xmm1, %xmm2\n";        // cmp input, 0
+  out << "    vpmovmskb %xmm2, %eax\n";
+  out << "    tzcnt  %eax, %esi\n";           // esi stores the position
+  // if zero is not found
+  out << "    cmpb    $32, %sil\n";
+  out << "    je .znf" << i << "\n";
+  if (c == '>') {
+    out << "    addl    %esi, %r14d\n";          // add offset to pc
+    out << "    addl    %r15d, %r14d\n";         // add accumulate offset to pc
+  } else if (c == '<') {
+    // bug memory scan larger than 15 won't work
+    out << "    movl    $15, %r13d\n";
+    out << "    subl    %esi, %r13d\n";
+    out << "    movl    %r13d, %esi\n";          // esi has the offset
+
+    out << "    subl    %esi, %r14d\n";         // sub offset to pc
+    out << "    subl    %r15d, %r14d\n";
+  }
+  // printf
+  out << "    addq    %r15, %rsi\n";
+  out << "    leaq   .L.str(%rip), %rdi\n";
+  out << "    xorl   %eax, %eax\n";
+  out << "    callq  _printf\n";
+  return i + 2;
 }
 }  // namespace
 
@@ -227,7 +199,7 @@ void Compiler::CodeGen(std::ofstream& out, bool sopt) {
             << ".b" << _target.at(i) << "\n";
         break;
       default: {
-        std::cout << "default: " << _buf[i] << '\n';
+        assert(false); // should not come here
       } break;
     }
   }
@@ -307,8 +279,6 @@ void Compiler::Profile() {
 }
 
 std::vector<struct ir> Compiler::ComputeIR(std::vector<unsigned char>& v, int l, int r) {
-  // ignore [ the first - or +
-  // std::map<int, struct ir> m;
   std::vector<struct ir> infos;
   int i = l;
   int j = r;
@@ -343,20 +313,6 @@ std::vector<struct ir> Compiler::ComputeIR(std::vector<unsigned char>& v, int l,
       v.push_back('y');
       info.index = v.size() - 1;
       infos.push_back(info);
-      // m.insert({v.size() - 1, info});
-      //if (shift < 0) {
-      //  v.push_back('l');
-      //} else {
-      //  v.push_back('r');
-      //}
-      //v.push_back(std::abs(shift) + '0'); // 123
-      //// std::cout << "shift amount:" << std::abs(shift) << "\n";
-      //if (change < 0) {
-      //  v.push_back('s');
-      //} else {
-      //  v.push_back('a');
-      //}
-      //v.push_back(std::abs(change) + '0');
 noGen:
       currShift = c;
       change = 0;
@@ -441,7 +397,24 @@ void Compiler::Compile(bool sopt) {
   out << "    .build_version macos, 14, 0\n";
   out << "    .globl  _tape\n";
   out << "    .globl  _main\n";
-  out << "    .p2align        4, 0x90\n\n";
+  out << "    .p2align        4, 0x90\n";
+  out << ".vs1:\n";
+  out << "    .byte   15\n";
+  out << "    .byte   14\n";
+  out << "    .byte   13\n";
+  out << "    .byte   12\n";
+  out << "    .byte   11\n";
+  out << "    .byte   10\n";
+  out << "    .byte   9\n";
+  out << "    .byte   8\n";
+  out << "    .byte   7\n";
+  out << "    .byte   6\n";
+  out << "    .byte   5\n";
+  out << "    .byte   4\n";
+  out << "    .byte   3\n";
+  out << "    .byte   2\n";
+  out << "    .byte   1\n";
+  out << "    .byte   0\n";
   out << "_main:\n";
   out << "    push   %rbp\n";
   out << "    mov    %rsp, %rbp\n";
@@ -455,4 +428,6 @@ void Compiler::Compile(bool sopt) {
   out << "    pop    %rbp\n";
   out << "    ret\n";
   out << ".zerofill __DATA,__common,_tape,320000,4\n";
+  out << ".L.str:\n";
+  out << "    .asciz  \"pointer stops at %d\"\n";
 }

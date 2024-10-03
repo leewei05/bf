@@ -1,26 +1,26 @@
 hanoi baseline
 
-real	0m13.856s
-user	0m11.824s
-sys	0m0.408s
+real	0m12.669s
+user	0m11.672s
+sys	0m0.323s
 
 ----------------------------------------
 hanoi loop optimization
 
-real	0m6.363s
-user	0m5.494s
-sys	0m0.282s
+real	0m6.209s
+user	0m5.500s
+sys	0m0.268s
 
 ----------------------------------------
 hanoi vector optimization
 
-real	0m0.903s
-user	0m0.468s
-sys	0m0.167s
+real	0m12.423s
+user	0m11.626s
+sys	0m0.302s
 
 ----------------------------------------
 hanoi both optimizations
 
-real	0m5.971s
-user	0m5.330s
-sys	0m0.211s
+real	0m6.774s
+user	0m5.654s
+sys	0m0.317s

@@ -1,26 +1,26 @@
 twinkle baseline
 
-real	0m1.044s
-user	0m0.551s
-sys	0m0.161s
+real	0m1.363s
+user	0m0.826s
+sys	0m0.219s
 
 ----------------------------------------
 twinkle loop optimization
 
-real	0m0.855s
-user	0m0.489s
-sys	0m0.137s
+real	0m1.387s
+user	0m0.805s
+sys	0m0.212s
 
 ----------------------------------------
 twinkle vector optimization
 
-real	0m0.773s
-user	0m0.424s
-sys	0m0.123s
+real	0m1.370s
+user	0m0.826s
+sys	0m0.224s
 
 ----------------------------------------
 twinkle both optimizations
 
-real	0m1.030s
-user	0m0.557s
-sys	0m0.166s
+real	0m1.309s
+user	0m0.804s
+sys	0m0.202s

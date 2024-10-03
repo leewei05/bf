@@ -1,26 +1,26 @@
 bench baseline
 
-real	0m7.984s
-user	0m8.185s
-sys	0m0.759s
+real	0m2.180s
+user	0m1.128s
+sys	0m0.274s
 
 ----------------------------------------
 bench loop optimization
 
-real	0m0.877s
-user	0m0.438s
-sys	0m0.147s
+real	0m1.190s
+user	0m0.750s
+sys	0m0.202s
 
 ----------------------------------------
 bench vector optimization
 
-real	0m0.789s
-user	0m0.432s
-sys	0m0.130s
+real	0m1.534s
+user	0m1.102s
+sys	0m0.192s
 
 ----------------------------------------
 bench both optimizations
 
-real	0m0.783s
-user	0m0.436s
-sys	0m0.131s
+real	0m1.214s
+user	0m0.752s
+sys	0m0.203s
